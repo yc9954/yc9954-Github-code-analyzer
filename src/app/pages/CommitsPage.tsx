@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { GitBranch, MessageSquare, Send, Copy, CheckCircle2 } from "lucide-react";
+import { GitBranch, MessageSquare, Send, Copy, CheckCircle2, Github } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Badge } from "@/app/components/ui/badge";
 
@@ -248,12 +248,17 @@ export function CommitsPage() {
             <div className="flex-1 overflow-y-auto p-4 min-h-0">
               {chatMessages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
-                  <div>
-                    <MessageSquare className="w-10 h-10 text-[#7d8590] mx-auto mb-2 opacity-50" />
-                    <p className="text-xs text-[#7d8590]">
+                  <div className="max-w-md">
+                    <Github className="w-16 h-16 text-white/40 mx-auto mb-4" />
+                    <p className="text-sm text-white/80 mb-2 font-medium">
                       {selectedCommit 
                         ? "Ask questions about this commit"
                         : "Select a commit to start"}
+                    </p>
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      {selectedCommit 
+                        ? "Get detailed insights about code changes, understand the impact of modifications, and receive suggestions for improvements. Ask about specific files, functions, or patterns in this commit."
+                        : "Choose a commit from the list to begin analyzing code changes. Our AI assistant can help you understand modifications, review code quality, and provide insights about the selected commit."}
                     </p>
                   </div>
                 </div>

@@ -35,22 +35,6 @@ export function TeamPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-2">
-              <div className="text-[10px] text-[#7d8590] mb-0.5">Team Members</div>
-              <div className="text-base font-semibold text-white">5</div>
-            </div>
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-2">
-              <div className="text-[10px] text-[#7d8590] mb-0.5">Total Commits</div>
-              <div className="text-base font-semibold text-white">515</div>
-            </div>
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-2">
-              <div className="text-[10px] text-[#7d8590] mb-0.5">Repositories</div>
-              <div className="text-base font-semibold text-white">3</div>
-            </div>
-          </div>
-
           {/* Team Members */}
           <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
             <div className="px-3 py-2 border-b border-[#30363d]">
