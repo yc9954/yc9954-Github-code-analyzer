@@ -28,121 +28,121 @@ const teamRanking = [
 export function RankingPage() {
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-white mb-1">Rankings</h1>
-            <p className="text-sm text-[#7d8590]">Performance leaderboards</p>
-          </div>
-          <div className="flex gap-2">
+      <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
+        {/* Compact Header */}
+        <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#0d1117]">
+          <div className="flex items-center justify-between">
+            <h1 className="text-base font-semibold text-white">Rankings</h1>
             <Select defaultValue="all">
-              <SelectTrigger className="w-32 bg-[#161b22] border-[#30363d] text-white h-8 text-sm">
+              <SelectTrigger className="w-32 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#161b22] border-[#30363d]">
-                <SelectItem value="all" className="text-white focus:bg-[#0d1117]">All Time</SelectItem>
-                <SelectItem value="month" className="text-white focus:bg-[#0d1117]">This Month</SelectItem>
-                <SelectItem value="week" className="text-white focus:bg-[#0d1117]">This Week</SelectItem>
+                <SelectItem value="all" className="text-white focus:bg-[#0d1117] text-xs">All Time</SelectItem>
+                <SelectItem value="month" className="text-white focus:bg-[#0d1117] text-xs">This Month</SelectItem>
+                <SelectItem value="week" className="text-white focus:bg-[#0d1117] text-xs">This Week</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="individual">
-          <TabsList className="bg-[#161b22] border-b border-[#30363d] w-full justify-start rounded-none p-0 h-auto">
-            <TabsTrigger value="individual" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#f78166] data-[state=active]:text-white text-[#7d8590] rounded-none px-4 py-2 text-sm">
-              Individual
-            </TabsTrigger>
-            <TabsTrigger value="team" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#f78166] data-[state=active]:text-white text-[#7d8590] rounded-none px-4 py-2 text-sm">
-              Team
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex-1 overflow-y-auto p-3">
 
-          {/* Individual Ranking */}
-          <TabsContent value="individual" className="mt-6">
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-[#30363d] hover:bg-transparent">
-                    <TableHead className="text-[#7d8590] font-medium w-16">Rank</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium">Developer</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-right">Score</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-right">Commits</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {individualRanking.map((person) => (
-                    <TableRow 
-                      key={person.rank} 
-                      className="border-[#30363d] hover:bg-[#0d1117] cursor-pointer"
-                    >
-                      <TableCell className="font-medium text-white">
-                        <div className="flex items-center gap-2">
-                          {person.rank <= 3 && <Trophy className="w-4 h-4 text-[#f0883e]" />}
-                          <span>#{person.rank}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-7 h-7 border border-[#30363d]">
-                            <AvatarImage src={defaultAvatar} />
-                            <AvatarFallback className="bg-[#21262d] text-white text-xs">
-                              {person.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="text-sm font-medium text-white">{person.name}</div>
-                            <div className="text-xs text-[#7d8590]">@{person.username}</div>
+          {/* Tabs */}
+          <Tabs defaultValue="individual">
+            <TabsList className="bg-[#161b22] border-b border-[#30363d] w-full justify-start rounded-none p-0 h-auto">
+              <TabsTrigger value="individual" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#f78166] data-[state=active]:text-white text-[#7d8590] rounded-none px-3 py-1.5 text-xs">
+                Individual
+              </TabsTrigger>
+              <TabsTrigger value="team" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#f78166] data-[state=active]:text-white text-[#7d8590] rounded-none px-3 py-1.5 text-xs">
+                Team
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Individual Ranking */}
+            <TabsContent value="individual" className="mt-2">
+              <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#30363d] hover:bg-transparent">
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] w-12 h-7 py-1">Rank</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Developer</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Score</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {individualRanking.map((person) => (
+                      <TableRow 
+                        key={person.rank} 
+                        className="border-[#30363d] hover:bg-[#0d1117] cursor-pointer h-8"
+                      >
+                        <TableCell className="font-medium text-white py-1">
+                          <div className="flex items-center gap-1.5">
+                            {person.rank <= 3 && <Trophy className="w-3 h-3 text-[#f0883e]" />}
+                            <span className="text-xs">#{person.rank}</span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-white text-right font-medium">{person.score}</TableCell>
-                      <TableCell className="text-[#7d8590] text-right">{person.commits}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+                        </TableCell>
+                        <TableCell className="py-1">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-5 h-5 border border-[#30363d]">
+                              <AvatarImage src={defaultAvatar} />
+                              <AvatarFallback className="bg-[#21262d] text-white text-[10px]">
+                                {person.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-xs font-medium text-white">{person.name}</div>
+                              <div className="text-[10px] text-[#7d8590]">@{person.username}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-white text-right font-medium text-xs py-1">{person.score}</TableCell>
+                        <TableCell className="text-[#7d8590] text-right text-xs py-1">{person.commits}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
 
-          {/* Team Ranking */}
-          <TabsContent value="team" className="mt-6">
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-[#30363d] hover:bg-transparent">
-                    <TableHead className="text-[#7d8590] font-medium w-16">Rank</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium">Team</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-right">Score</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-right">Commits</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-right">Members</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teamRanking.map((team) => (
-                    <TableRow 
-                      key={team.rank} 
-                      className="border-[#30363d] hover:bg-[#0d1117] cursor-pointer"
-                    >
-                      <TableCell className="font-medium text-white">
-                        <div className="flex items-center gap-2">
-                          {team.rank <= 3 && <Trophy className="w-4 h-4 text-[#f0883e]" />}
-                          <span>#{team.rank}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium text-white">{team.name}</TableCell>
-                      <TableCell className="text-white text-right font-medium">{team.score}</TableCell>
-                      <TableCell className="text-[#7d8590] text-right">{team.commits}</TableCell>
-                      <TableCell className="text-[#7d8590] text-right">{team.members}</TableCell>
+            {/* Team Ranking */}
+            <TabsContent value="team" className="mt-2">
+              <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#30363d] hover:bg-transparent">
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] w-12 h-7 py-1">Rank</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Team</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Score</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
+                      <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Members</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-        </Tabs>
+                  </TableHeader>
+                  <TableBody>
+                    {teamRanking.map((team) => (
+                      <TableRow 
+                        key={team.rank} 
+                        className="border-[#30363d] hover:bg-[#0d1117] cursor-pointer h-8"
+                      >
+                        <TableCell className="font-medium text-white py-1">
+                          <div className="flex items-center gap-1.5">
+                            {team.rank <= 3 && <Trophy className="w-3 h-3 text-[#f0883e]" />}
+                            <span className="text-xs">#{team.rank}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-white text-xs py-1">{team.name}</TableCell>
+                        <TableCell className="text-white text-right font-medium text-xs py-1">{team.score}</TableCell>
+                        <TableCell className="text-[#7d8590] text-right text-xs py-1">{team.commits}</TableCell>
+                        <TableCell className="text-[#7d8590] text-right text-xs py-1">{team.members}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -64,7 +64,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 py-3">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -74,7 +74,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   key={item.path}
                   to={item.path}
                   onClick={onToggle}
-                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  className={`group relative flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium transition-all ${
                     isActive
                       ? "text-white"
                       : "text-[#7d8590] hover:text-white"
@@ -83,13 +83,13 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   {/* Active background */}
                   {isActive && (
                     <>
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#7aa2f7]/20 to-[#bb9af7]/20 rounded-lg"></div>
-                      <div className="absolute inset-0 bg-white/5 backdrop-blur-sm rounded-lg"></div>
+                      <div className="absolute left-0 right-0 top-0 bottom-0 bg-gradient-to-br from-[#7aa2f7]/20 to-[#bb9af7]/20"></div>
+                      <div className="absolute left-0 right-0 top-0 bottom-0 bg-white/5 backdrop-blur-sm"></div>
                     </>
                   )}
                   
                   {/* Hover effect */}
-                  <div className={`absolute inset-0 bg-white/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'hidden' : ''}`}></div>
+                  <div className={`absolute left-0 right-0 top-0 bottom-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'hidden' : ''}`}></div>
                   
                   <Icon className="w-4 h-4 relative z-10 flex-shrink-0" />
                   <span className="relative z-10">{item.label}</span>
