@@ -120,30 +120,30 @@ export function CommitsPage() {
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
-        {/* Top Header - Compact */}
-        <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#0d1117]">
+        {/* Top Header - Refined */}
+        <div className="px-6 py-4 border-b border-[#30363d] bg-[#0d1117]">
           <div className="flex items-center justify-between">
-            <h1 className="text-base font-semibold text-white">Commits</h1>
-            <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-[#e6edf3]">Commits</h1>
+            <div className="flex items-center gap-3">
               <Select value={selectedRepo} onValueChange={setSelectedRepo}>
-                <SelectTrigger className="w-48 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
+                <SelectTrigger className="w-56 bg-[#161b22] border-[#30363d] text-[#e6edf3] h-10 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#161b22] border-[#30363d]">
                   {repositories.map((repo) => (
-                    <SelectItem key={repo.id} value={repo.name} className="text-white focus:bg-[#0d1117] text-xs">
+                    <SelectItem key={repo.id} value={repo.name} className="text-[#e6edf3] focus:bg-[#21262d] text-sm">
                       {repo.fullName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select defaultValue="main">
-                <SelectTrigger className="w-24 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
+                <SelectTrigger className="w-32 bg-[#161b22] border-[#30363d] text-[#e6edf3] h-10 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#161b22] border-[#30363d]">
-                  <SelectItem value="main" className="text-white focus:bg-[#0d1117] text-xs">main</SelectItem>
-                  <SelectItem value="develop" className="text-white focus:bg-[#0d1117] text-xs">develop</SelectItem>
+                  <SelectItem value="main" className="text-[#e6edf3] focus:bg-[#21262d] text-sm">main</SelectItem>
+                  <SelectItem value="develop" className="text-[#e6edf3] focus:bg-[#21262d] text-sm">develop</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -153,71 +153,71 @@ export function CommitsPage() {
         {/* Main Content Area */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Panel - Commit List */}
-          <div className="w-[360px] border-r border-[#30363d] bg-[#0d1117] flex flex-col flex-shrink-0">
-            {/* Commit List Header - Compact */}
-            <div className="px-3 py-2 border-b border-[#30363d] bg-[#161b22] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-white">Commits</span>
-                <span className="text-xs text-[#7d8590]">Jan 14</span>
+          <div className="w-[420px] border-r border-[#30363d] bg-[#0d1117] flex flex-col flex-shrink-0">
+            {/* Commit List Header - Refined */}
+            <div className="px-5 py-3 border-b border-[#30363d] bg-[#161b22] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-[#e6edf3]">Commits</span>
+                <span className="text-sm text-[#8b949e]">Jan 14</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Button variant="outline" size="sm" className="border-[#30363d] bg-transparent text-white hover:bg-[#0d1117] h-6 text-[10px] px-1.5">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="border-[#30363d] bg-transparent text-[#c9d1d9] hover:bg-[#21262d] h-8 text-xs px-3">
                   All users
                 </Button>
-                <Button variant="outline" size="sm" className="border-[#30363d] bg-transparent text-white hover:bg-[#0d1117] h-6 text-[10px] px-1.5">
+                <Button variant="outline" size="sm" className="border-[#30363d] bg-transparent text-[#c9d1d9] hover:bg-[#21262d] h-8 text-xs px-3">
                   All time
                 </Button>
               </div>
             </div>
 
-            {/* Commit List - Dense */}
+            {/* Commit List - Clean */}
             <div className="flex-1 overflow-y-auto">
               <div className="divide-y divide-[#30363d]">
                 {commits.map((commit) => (
-                  <div 
-                    key={commit.sha} 
+                  <div
+                    key={commit.sha}
                     onClick={() => handleCommitSelect(commit.sha)}
-                    className={`group px-3 py-2 hover:bg-[#161b22] transition-colors cursor-pointer ${
-                      selectedCommit === commit.sha ? 'bg-[#161b22] border-l-2 border-l-[#7aa2f7]' : ''
+                    className={`group px-5 py-4 hover:bg-[#161b22] transition-colors cursor-pointer ${
+                      selectedCommit === commit.sha ? 'bg-[#161b22] border-l-2 border-l-[#58a6ff]' : ''
                     }`}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
+                        <div className="flex items-center gap-2 mb-2">
                           {selectedCommit === commit.sha && (
-                            <CheckCircle2 className="w-3 h-3 text-[#7aa2f7] flex-shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-[#58a6ff] flex-shrink-0" />
                           )}
-                          <span className="text-xs text-white font-normal leading-tight line-clamp-2">{commit.message}</span>
+                          <span className="text-sm text-[#e6edf3] font-medium leading-tight line-clamp-2">{commit.message}</span>
                           {commit.verified && (
-                            <Badge className="bg-transparent border border-[#30363d] text-[#3fb950] hover:bg-transparent h-4 text-[10px] px-1 ml-auto flex-shrink-0">
+                            <Badge className="bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] hover:bg-[#3fb950]/10 h-5 text-xs px-2 ml-auto flex-shrink-0">
                               Verified
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-[#7d8590]">
-                          <span className="truncate">{commit.author}</span>
+                        <div className="flex items-center gap-2 text-xs text-[#8b949e]">
+                          <span className="truncate font-medium">{commit.author}</span>
                           <span>·</span>
                           <span>{commit.time}</span>
                           <span>·</span>
-                          <div className="flex items-center gap-0.5">
-                            <GitBranch className="w-2.5 h-2.5" />
+                          <div className="flex items-center gap-1">
+                            <GitBranch className="w-3 h-3" />
                             <span className="truncate">{commit.branch}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-5 px-1 text-[#7d8590] hover:text-white"
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigator.clipboard.writeText(commit.sha);
                           }}
                         >
-                          <Copy className="w-3 h-3" />
+                          <Copy className="w-3.5 h-3.5" />
                         </Button>
-                        <code className="text-[10px] text-[#7d8590] font-mono bg-[#0d1117] px-1.5 py-0.5 rounded border border-[#30363d]">
+                        <code className="text-xs text-[#8b949e] font-mono bg-[#0d1117] px-2 py-1 rounded border border-[#30363d]">
                           {commit.sha.substring(0, 7)}
                         </code>
                       </div>
@@ -230,13 +230,13 @@ export function CommitsPage() {
 
           {/* Right Panel - AI Chat */}
           <div className="flex-1 flex flex-col bg-[#0d1117] min-w-0">
-            {/* Chat Header - Compact */}
-            <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#161b22]">
+            {/* Chat Header - Refined */}
+            <div className="px-5 py-3 border-b border-[#30363d] bg-[#161b22]">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-white">AI Assistant</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-[#e6edf3]">AI Assistant</span>
                   {selectedCommit && (
-                    <code className="text-[10px] text-[#7aa2f7] font-mono bg-[#0d1117] px-1.5 py-0.5 rounded border border-[#30363d]">
+                    <code className="text-xs text-[#58a6ff] font-mono bg-[#0d1117] px-2 py-1 rounded border border-[#30363d]">
                       {selectedCommit.substring(0, 7)}
                     </code>
                   )}
@@ -245,31 +245,33 @@ export function CommitsPage() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 min-h-0">
+            <div className="flex-1 overflow-y-auto p-6 min-h-0">
               {chatMessages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
-                  <div className="max-w-md">
-                    <Github className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                    <p className="text-sm text-white/80 mb-2 font-medium">
-                      {selectedCommit 
+                  <div className="max-w-lg">
+                    <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#58a6ff]/20 to-[#388bfd]/20 rounded-2xl flex items-center justify-center ring-1 ring-[#58a6ff]/30">
+                      <Github className="w-10 h-10 text-[#58a6ff]" />
+                    </div>
+                    <p className="text-base text-[#e6edf3] mb-3 font-semibold">
+                      {selectedCommit
                         ? "Ask questions about this commit"
                         : "Select a commit to start"}
                     </p>
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      {selectedCommit 
+                    <p className="text-sm text-[#8b949e] leading-relaxed">
+                      {selectedCommit
                         ? "Get detailed insights about code changes, understand the impact of modifications, and receive suggestions for improvements. Ask about specific files, functions, or patterns in this commit."
                         : "Choose a commit from the list to begin analyzing code changes. Our AI assistant can help you understand modifications, review code quality, and provide insights about the selected commit."}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3 max-w-3xl mx-auto">
+                <div className="space-y-4 max-w-4xl mx-auto">
                   {chatMessages.map((msg, index) => (
                     <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[75%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
-                        msg.role === 'user' 
-                          ? 'bg-[#7aa2f7] text-white' 
-                          : 'bg-[#161b22] border border-[#30363d] text-white'
+                      <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'bg-[#58a6ff] text-white'
+                          : 'bg-[#161b22] border border-[#30363d] text-[#e6edf3]'
                       }`}>
                         {msg.content}
                       </div>
@@ -279,23 +281,23 @@ export function CommitsPage() {
               )}
             </div>
 
-            {/* Chat Input - Compact */}
-            <div className="px-4 py-2.5 border-t border-[#30363d] bg-[#161b22]">
-              <div className="flex gap-2 max-w-3xl mx-auto">
+            {/* Chat Input - Clean and spacious */}
+            <div className="px-6 py-4 border-t border-[#30363d] bg-[#161b22]">
+              <div className="flex gap-3 max-w-4xl mx-auto">
                 <Input
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   placeholder={selectedCommit ? `Ask about ${selectedCommit.substring(0, 7)}...` : "Ask about commits..."}
-                  className="flex-1 bg-[#0d1117] border-[#30363d] text-white text-xs h-8 focus:border-[#7aa2f7]"
+                  className="flex-1 bg-[#0d1117] border-[#30363d] text-[#e6edf3] text-sm h-11 px-4 focus:border-[#58a6ff] focus:ring-2 focus:ring-[#58a6ff]/20"
                 />
-                <Button 
+                <Button
                   onClick={handleSend}
-                  size="sm" 
-                  className="bg-[#7aa2f7] hover:bg-[#7dcfff] text-white border-0 h-8 px-3"
+                  size="sm"
+                  className="bg-[#58a6ff] hover:bg-[#388bfd] text-white border-0 h-11 px-5"
                   disabled={!message.trim()}
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
             </div>

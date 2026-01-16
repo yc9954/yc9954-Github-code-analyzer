@@ -1,7 +1,8 @@
 import { DashboardLayout } from "@/app/components/DashboardLayout";
-import { GitCommit, Star, Search, Trophy } from "lucide-react";
+import { GitCommit, Star, Search, Trophy, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
+import { Badge } from "@/app/components/ui/badge";
 import defaultAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 // Mock data
@@ -34,79 +35,101 @@ const todayRanking = [
   { rank: 5, name: "Emma Davis", username: "emmad", commits: 6, score: 79 },
 ];
 
+const languageColors: { [key: string]: string } = {
+  TypeScript: "#58a6ff",
+  JavaScript: "#d29922",
+  Python: "#3fb950",
+  Go: "#00add8",
+  Vue: "#3fb950",
+  C: "#555555",
+};
+
 export function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col bg-[#0d1117]">
-        {/* Compact Header */}
-        <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#0d1117]">
-          <h1 className="text-base font-semibold text-white">Home</h1>
+        {/* Header - More spacious */}
+        <div className="px-6 py-4 border-b border-[#30363d] bg-[#0d1117]">
+          <h1 className="text-xl font-semibold text-[#e6edf3]">Home</h1>
         </div>
 
-        <div className="flex-1 flex gap-2 p-2 overflow-hidden">
+        <div className="flex-1 flex gap-4 p-4 overflow-hidden">
           {/* Left Sidebar - Top Repositories */}
-          <div className="w-56 flex-shrink-0 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col max-h-[300px]">
-            <div className="px-2 py-1 border-b border-white/10">
-              <h2 className="text-[10px] font-semibold text-white">Top repositories</h2>
+          <div className="w-64 flex-shrink-0 bg-[#161b22] border border-[#30363d] rounded-xl flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#30363d]">
+              <h2 className="text-sm font-semibold text-[#e6edf3]">Top repositories</h2>
             </div>
-            <div className="p-1 border-b border-white/10">
+            <div className="px-3 py-2 border-b border-[#30363d]">
               <div className="relative">
-                <Search className="absolute left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-white/60" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b949e]" />
                 <input
                   type="text"
-                  placeholder="Find..."
-                  className="w-full pl-5 pr-1 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#7aa2f7] focus:bg-white/10"
+                  placeholder="Find a repository..."
+                  className="w-full pl-9 pr-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-sm text-[#e6edf3] placeholder:text-[#6e7681] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]/30 transition-all"
                 />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <div>
-                {myRepositories.slice(0, 3).map((repo) => (
+              <div className="py-2">
+                {myRepositories.slice(0, 4).map((repo) => (
                   <Link
                     key={repo.name}
                     to={`/repository`}
-                    className="block w-full px-2 py-1.5 text-[10px] text-white/90 hover:bg-white/10 transition-colors duration-150"
+                    className="block w-full px-4 py-2.5 text-sm text-[#c9d1d9] hover:bg-[#21262d] transition-colors duration-150"
                   >
-                    <div className="font-medium truncate">{repo.name}</div>
+                    <div className="font-medium truncate text-[#e6edf3]">{repo.name}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1 text-xs text-[#8b949e]">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: languageColors[repo.language] || "#8b949e" }}></span>
+                        {repo.language}
+                      </span>
+                      <span className="text-xs text-[#8b949e]">{repo.commits} commits</span>
+                    </div>
                   </Link>
                 ))}
-                <button className="w-full text-left px-2 py-1.5 text-[10px] text-[#7aa2f7] hover:text-[#7dcfff] hover:bg-white/10 transition-colors duration-150">
-                  More
-                </button>
+                <Link to="/repository" className="block w-full text-left px-4 py-2.5 text-sm text-[#58a6ff] hover:text-[#79c0ff] hover:bg-[#21262d] transition-colors duration-150">
+                  View all repositories →
+                </Link>
               </div>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 flex flex-col gap-2 min-w-0 overflow-hidden">
+          <div className="flex-1 flex flex-col gap-4 min-w-0 overflow-hidden">
             {/* Feed Section */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden flex flex-col max-h-[500px]">
-              <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-white">Feed</h3>
-                <button className="text-[10px] text-white/70 hover:text-white hover:opacity-80">Filter</button>
+            <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden flex flex-col flex-1">
+              <div className="px-5 py-3.5 border-b border-[#30363d] flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[#e6edf3]">Feed</h3>
+                <button className="text-sm text-[#8b949e] hover:text-[#58a6ff] transition-colors">Filter</button>
               </div>
-              <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Trending Repositories */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h4 className="text-[10px] font-medium text-white">Trending repositories</h4>
-                    <button className="text-[10px] text-[#7aa2f7] hover:text-[#7dcfff]">See more</button>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-[#58a6ff]" />
+                      <h4 className="text-sm font-semibold text-[#e6edf3]">Trending repositories</h4>
+                    </div>
+                    <button className="text-sm text-[#58a6ff] hover:text-[#79c0ff]">See more</button>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-3">
                     {trendingRepos.map((repo, idx) => (
-                      <div key={idx} className="p-1.5 border border-white/10 rounded hover:bg-white/10 transition-colors">
-                        <div className="flex items-start justify-between mb-0.5">
+                      <div key={idx} className="p-4 border border-[#30363d] rounded-lg hover:bg-[#21262d] transition-all cursor-pointer">
+                        <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] font-medium text-white truncate">{repo.owner}/{repo.name}</div>
-                            <div className="text-[10px] text-white/60 mt-0.5 line-clamp-1">{repo.description}</div>
+                            <div className="text-sm font-medium text-[#58a6ff] hover:underline truncate">{repo.owner}/{repo.name}</div>
+                            <div className="text-sm text-[#8b949e] mt-1 line-clamp-2">{repo.description}</div>
                           </div>
-                          <button className="ml-2 flex items-center gap-1 px-1.5 py-0.5 border border-white/10 rounded text-[10px] text-white/80 hover:bg-white/10 flex-shrink-0">
-                            <Star className="w-2.5 h-2.5" />
-                            {repo.stars}
+                          <button className="ml-3 flex items-center gap-1.5 px-3 py-1.5 border border-[#30363d] rounded-lg text-sm text-[#c9d1d9] hover:bg-[#30363d] transition-all flex-shrink-0">
+                            <Star className="w-4 h-4" />
+                            <span className="font-medium">{repo.stars}</span>
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-white/60">{repo.language}</span>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="flex items-center gap-1.5 text-xs text-[#8b949e]">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: languageColors[repo.language] || "#8b949e" }}></span>
+                            {repo.language}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -115,16 +138,16 @@ export function DashboardPage() {
 
                 {/* Recommended */}
                 <div>
-                  <h4 className="text-[10px] font-medium text-white mb-1.5">Recommended for you</h4>
-                  <div className="space-y-1.5">
+                  <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">Recommended for you</h4>
+                  <div className="space-y-2">
                     {recentActivity.map((activity, idx) => (
-                      <div key={idx} className="p-1.5 border border-white/10 rounded hover:bg-white/10 transition-colors">
-                        <div className="flex items-center gap-1.5">
-                          <GitCommit className="w-2.5 h-2.5 text-white/60 flex-shrink-0" />
+                      <div key={idx} className="p-3 border border-[#30363d] rounded-lg hover:bg-[#21262d] transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <GitCommit className="w-4 h-4 text-[#8b949e] flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-white truncate">{activity.message}</div>
-                            <div className="text-[10px] text-white/60 mt-0.5">
-                              {activity.repo} · {activity.time}
+                            <div className="text-sm text-[#e6edf3] font-medium truncate">{activity.message}</div>
+                            <div className="text-xs text-[#8b949e] mt-1">
+                              <span className="text-[#58a6ff]">{activity.repo}</span> · {activity.time}
                             </div>
                           </div>
                         </div>
@@ -137,60 +160,61 @@ export function DashboardPage() {
           </div>
 
           {/* Right Sidebar - Latest Activity + Today's Ranking */}
-          <div className="w-56 flex-shrink-0 flex flex-col gap-2">
+          <div className="w-72 flex-shrink-0 flex flex-col gap-4">
             {/* Latest Activity */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col max-h-[200px]">
-              <div className="px-2 py-1 border-b border-white/10">
-                <h2 className="text-[10px] font-semibold text-white">Latest activity</h2>
+            <div className="bg-[#161b22] border border-[#30363d] rounded-xl flex flex-col overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#30363d]">
+                <h2 className="text-sm font-semibold text-[#e6edf3]">Latest activity</h2>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                <div>
-                  {recentActivity.map((activity, idx) => (
-                    <div key={idx} className="w-full px-2 py-1.5 hover:bg-white/10 transition-colors duration-150 cursor-pointer">
-                      <div className="text-[10px] text-white/60 mb-0.5">{activity.time}</div>
-                      <div className="text-[10px] text-white truncate">{activity.message}</div>
-                      <div className="text-[10px] text-white/60 mt-0.5 truncate">{activity.repo}</div>
-                    </div>
-                  ))}
-                </div>
+              <div className="py-2">
+                {recentActivity.map((activity, idx) => (
+                  <div key={idx} className="w-full px-4 py-3 hover:bg-[#21262d] transition-colors duration-150 cursor-pointer">
+                    <div className="text-xs text-[#8b949e] mb-1">{activity.time}</div>
+                    <div className="text-sm text-[#e6edf3] font-medium truncate">{activity.message}</div>
+                    <div className="text-xs text-[#58a6ff] mt-1 truncate">{activity.repo}</div>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Today's Ranking */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col">
-              <div className="px-2 py-1 border-b border-white/10">
-                <div className="flex items-center gap-1">
-                  <Trophy className="w-2.5 h-2.5 text-[#f0883e]" />
-                  <h2 className="text-[10px] font-semibold text-white">오늘의 랭킹</h2>
+            <div className="bg-[#161b22] border border-[#30363d] rounded-xl flex flex-col overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#30363d]">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-[#d29922]" />
+                  <h2 className="text-sm font-semibold text-[#e6edf3]">Today's Ranking</h2>
                 </div>
               </div>
-              <div>
-                {todayRanking.slice(0, 3).map((person) => (
+              <div className="py-2">
+                {todayRanking.slice(0, 5).map((person) => (
                   <div
                     key={person.rank}
-                    className="flex items-center gap-1.5 w-full px-2 py-1.5 hover:bg-white/10 transition-colors duration-150 cursor-pointer"
+                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#21262d] transition-colors duration-150 cursor-pointer"
                   >
-                    <div className="flex items-center gap-0.5">
-                      {person.rank <= 3 && (
-                        <Trophy className={`w-2.5 h-2.5 ${
-                          person.rank === 1 ? 'text-[#f0883e]' : 
-                          person.rank === 2 ? 'text-gray-400' : 
+                    <div className="flex items-center gap-2">
+                      {person.rank <= 3 ? (
+                        <Trophy className={`w-4 h-4 ${
+                          person.rank === 1 ? 'text-[#d29922]' :
+                          person.rank === 2 ? 'text-[#8b949e]' :
                           'text-[#cd7f32]'
                         }`} />
+                      ) : (
+                        <span className="text-sm font-medium text-[#8b949e] w-4 text-center">{person.rank}</span>
                       )}
-                      <span className="text-[10px] font-medium text-white">#{person.rank}</span>
                     </div>
-                    <Avatar className="w-4 h-4 border border-white/20">
+                    <Avatar className="w-8 h-8 border-2 border-[#30363d]">
                       <AvatarImage src={defaultAvatar} />
-                      <AvatarFallback className="bg-white/10 text-white/80 text-[8px]">
+                      <AvatarFallback className="bg-[#21262d] text-[#8b949e] text-xs">
                         {person.name.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-medium text-white truncate">{person.name}</div>
-                      <div className="text-[9px] text-white/60">{person.commits} commits</div>
+                      <div className="text-sm font-medium text-[#e6edf3] truncate">{person.name}</div>
+                      <div className="text-xs text-[#8b949e]">{person.commits} commits</div>
                     </div>
-                    <div className="text-[10px] font-semibold text-[#7aa2f7]">{person.score}</div>
+                    <Badge className="bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30 font-semibold">
+                      {person.score}
+                    </Badge>
                   </div>
                 ))}
               </div>
