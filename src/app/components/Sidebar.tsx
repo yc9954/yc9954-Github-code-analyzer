@@ -8,13 +8,15 @@ import {
   GitCommit, 
   Settings,
   Github,
-  ChevronLeft
+  ChevronLeft,
+  Search
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/repository", label: "Repository", icon: GitBranch },
+  { path: "/search", label: "Search", icon: Search },
   { path: "/sprint", label: "Sprint", icon: Zap },
   { path: "/ranking", label: "Ranking", icon: Trophy },
   { path: "/team", label: "Team", icon: Users },

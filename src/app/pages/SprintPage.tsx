@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -205,86 +205,6 @@ export function SprintPage() {
                       Register for Sprint
                     </Button>
                   </div>
-
-                  {/* Commit History with Dropdown */}
-                  <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-                    <div className="px-3 py-2 border-b border-[#30363d]">
-                      <h3 className="text-[10px] font-medium text-white">Recent Commits</h3>
-                    </div>
-                    <div className="divide-y divide-[#30363d]">
-                      {commitHistory.map((commit) => (
-                        <div key={commit.sha}>
-                          <div
-                            onClick={() => toggleCommit(commit.sha)}
-                            className="p-1.5 hover:bg-[#0d1117] cursor-pointer flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-1 flex-1 min-w-0">
-                              {expandedCommits.includes(commit.sha) ? (
-                                <ChevronDown className="w-2.5 h-2.5 text-[#7d8590] flex-shrink-0" />
-                              ) : (
-                                <ChevronRight className="w-2.5 h-2.5 text-[#7d8590] flex-shrink-0" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[10px] text-white truncate">{commit.message}</div>
-                                <div className="text-[10px] text-[#7d8590] mt-0.5">{commit.time}</div>
-                              </div>
-                            </div>
-                            <code className="text-[10px] text-[#7d8590] font-mono ml-1.5">{commit.sha.substring(0, 7)}</code>
-                          </div>
-                          {expandedCommits.includes(commit.sha) && (
-                            <div className="px-1.5 pb-1.5 bg-[#0d1117]">
-                              <div className="p-1.5 border border-[#30363d] rounded">
-                                <div className="flex items-center gap-2 text-[10px] mb-0.5">
-                                  <span className="text-[#3fb950]">+{commit.additions}</span>
-                                  <span className="text-[#f85149]">-{commit.deletions}</span>
-                                </div>
-                                <div className="text-[10px] text-[#7d8590] font-mono">
-                                  // Code diff preview
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right - AI Agent */}
-                <div className="space-y-2">
-                  <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-2">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <div className="w-5 h-5 bg-gradient-to-br from-[#7aa2f7]/20 to-[#bb9af7]/20 rounded flex items-center justify-center">
-                        <Sparkles className="w-2.5 h-2.5 text-[#7aa2f7]" />
-                      </div>
-                      <div>
-                        <h3 className="text-[10px] font-medium text-white">Sprint Assistant</h3>
-                        <p className="text-[10px] text-[#7d8590]">Get help with sprint</p>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => setAiOpen(!aiOpen)}
-                      className="w-full bg-[#7aa2f7] hover:bg-[#7dcfff] text-white border-0 h-6 text-[10px]"
-                    >
-                      <MessageSquare className="w-2.5 h-2.5 mr-1" />
-                      Chat with AI
-                    </Button>
-                  </div>
-
-                  {aiOpen && (
-                    <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-2 space-y-1">
-                      <div className="text-[10px] text-[#7d8590] mb-1">Quick Actions</div>
-                      <button className="w-full text-left p-1.5 bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d] rounded text-[10px] text-white">
-                        Analyze my commit patterns
-                      </button>
-                      <button className="w-full text-left p-1.5 bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d] rounded text-[10px] text-white">
-                        Compare with other teams
-                      </button>
-                      <button className="w-full text-left p-1.5 bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d] rounded text-[10px] text-white">
-                        Suggest improvements
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

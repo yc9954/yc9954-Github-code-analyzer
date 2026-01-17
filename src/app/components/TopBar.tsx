@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Bell, Search, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
@@ -18,9 +19,17 @@ interface TopBarProps {
 
 export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = () => {
     navigate('/');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   return (
@@ -38,14 +47,16 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="relative flex-1">
+          <form onSubmit={handleSearch} className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6e7681]" />
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search repositories, sprints, teams..."
               className="w-full h-8 pl-9 pr-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-sm text-white placeholder:text-[#6e7681] focus:outline-none focus:border-[#7aa2f7]/50 focus:ring-2 focus:ring-[#7aa2f7]/20 transition-all"
             />
-          </div>
+          </form>
         </div>
 
         {/* Right side */}

@@ -8,6 +8,7 @@ import { RankingPage } from "@/app/pages/RankingPage";
 import { TeamPage } from "@/app/pages/TeamPage";
 import { CommitsPage } from "@/app/pages/CommitsPage";
 import { SettingsPage } from "@/app/pages/SettingsPage";
+import { SearchPage } from "@/app/pages/SearchPage";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/team" element={<TeamPage />} />
         <Route path="/commits" element={<CommitsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
