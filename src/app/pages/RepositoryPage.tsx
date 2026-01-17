@@ -81,9 +81,10 @@ export function RepositoryPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {/* Dense Two-Column Layout */}
-          <div className="grid grid-cols-12 gap-2">
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="max-w-7xl mx-auto space-y-2">
+            {/* Dense Two-Column Layout */}
+            <div className="grid grid-cols-12 gap-2">
             {/* Left Column - Full Height Tables */}
             <div className="col-span-8 space-y-2">
               {/* Branches Table */}
@@ -232,6 +233,7 @@ export function RepositoryPage() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

@@ -112,7 +112,7 @@ export function SearchPage() {
       <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-4 py-6">
-            <div className="flex gap-6 max-w-[1280px] mx-auto">
+            <div className="flex gap-6">
               {/* Left Sidebar - Filters */}
               <aside className="w-64 flex-shrink-0">
                 <div className="sticky top-6 space-y-6">

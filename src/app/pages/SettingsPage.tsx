@@ -18,10 +18,10 @@ export function SettingsPage() {
           <h1 className="text-base font-semibold text-white">Settings</h1>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-
-          {/* GitHub Integration */}
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="max-w-4xl mx-auto space-y-2">
+            {/* GitHub Integration */}
+            <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
             <div className="px-3 py-2 border-b border-[#30363d]">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-medium text-white">GitHub Integration</h3>
@@ -180,6 +180,7 @@ export function SettingsPage() {
                 </Button>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

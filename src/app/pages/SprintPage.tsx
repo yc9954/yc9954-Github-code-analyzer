@@ -96,10 +96,10 @@ export function SprintPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-
-          {/* Main Content */}
-          {viewMode === "list" && (
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="max-w-6xl mx-auto space-y-2">
+            {/* Main Content */}
+            {viewMode === "list" && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
@@ -410,6 +410,7 @@ export function SprintPage() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </DashboardLayout>
