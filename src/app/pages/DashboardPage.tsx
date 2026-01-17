@@ -48,31 +48,31 @@ export function DashboardPage() {
             <div className="flex gap-4">
               {/* Left Sidebar - Top Repositories */}
               <div className="w-64 flex-shrink-0 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col max-h-[400px]">
-                <div className="px-3 py-2 border-b border-white/10">
-                  <h2 className="text-xs font-semibold text-white">Top repositories</h2>
+                <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+                  <h2 className="text-sm font-semibold text-white">Top repositories</h2>
                 </div>
-                <div className="p-2 border-b border-white/10">
+                <div className="p-2 border-b border-white/10 bg-[#0d1117]">
                   <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60" />
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
                     <input
                       type="text"
                       placeholder="Find..."
-                      className="w-full pl-7 pr-2 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#7aa2f7] focus:bg-white/10"
+                      className="w-full pl-8 pr-2 py-2 bg-white/5 border border-white/10 rounded text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#7aa2f7] focus:bg-white/10"
                     />
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto bg-[#0d1117]">
                   <div>
                     {myRepositories.slice(0, 3).map((repo) => (
                       <Link
                         key={repo.name}
                         to={`/repository`}
-                        className="block w-full px-3 py-2 text-xs text-white/90 hover:bg-white/10 transition-colors duration-150"
+                        className="block w-full px-3 py-2 text-sm text-white/90 hover:bg-white/10 transition-colors duration-150"
                       >
                         <div className="font-medium truncate">{repo.name}</div>
                       </Link>
                     ))}
-                    <button className="w-full text-left px-3 py-2 text-xs text-[#7aa2f7] hover:text-[#7dcfff] hover:bg-white/10 transition-colors duration-150">
+                    <button className="w-full text-left px-3 py-2 text-sm text-[#7aa2f7] hover:text-[#7dcfff] hover:bg-white/10 transition-colors duration-150">
                       More
                     </button>
                   </div>
@@ -83,32 +83,32 @@ export function DashboardPage() {
               <div className="flex-1 flex flex-col gap-4 min-w-0">
                 {/* Feed Section */}
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden flex flex-col max-h-[600px]">
-                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-white/5">
                     <h3 className="text-sm font-semibold text-white">Feed</h3>
-                    <button className="text-xs text-white/70 hover:text-white hover:opacity-80">Filter</button>
+                    <button className="text-sm text-white/70 hover:text-white hover:opacity-80">Filter</button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0d1117]">
                     {/* Trending Repositories */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-xs font-medium text-white">Trending repositories</h4>
-                        <button className="text-xs text-[#7aa2f7] hover:text-[#7dcfff]">See more</button>
+                        <h4 className="text-sm font-medium text-white">Trending repositories</h4>
+                        <button className="text-sm text-[#7aa2f7] hover:text-[#7dcfff]">See more</button>
                       </div>
                       <div className="space-y-2">
                         {trendingRepos.map((repo, idx) => (
                           <div key={idx} className="p-3 border border-white/10 rounded hover:bg-white/10 transition-colors">
                             <div className="flex items-start justify-between mb-1">
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium text-white truncate">{repo.owner}/{repo.name}</div>
-                                <div className="text-xs text-white/60 mt-1 line-clamp-1">{repo.description}</div>
+                                <div className="text-sm font-medium text-white truncate">{repo.owner}/{repo.name}</div>
+                                <div className="text-sm text-white/60 mt-1 line-clamp-1">{repo.description}</div>
                               </div>
-                              <button className="ml-3 flex items-center gap-1.5 px-2 py-1 border border-white/10 rounded text-xs text-white/80 hover:bg-white/10 flex-shrink-0">
-                                <Star className="w-3 h-3" />
+                              <button className="ml-3 flex items-center gap-1.5 px-2 py-1 border border-white/10 rounded text-sm text-white/80 hover:bg-white/10 flex-shrink-0">
+                                <Star className="w-4 h-4" />
                                 {repo.stars}
                               </button>
                             </div>
                             <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-xs text-white/60">{repo.language}</span>
+                              <span className="text-sm text-white/60">{repo.language}</span>
                             </div>
                           </div>
                         ))}
@@ -117,15 +117,15 @@ export function DashboardPage() {
 
                     {/* Recommended */}
                     <div>
-                      <h4 className="text-xs font-medium text-white mb-2">Recommended for you</h4>
+                      <h4 className="text-sm font-medium text-white mb-2">Recommended for you</h4>
                       <div className="space-y-2">
                         {recentActivity.map((activity, idx) => (
                           <div key={idx} className="p-3 border border-white/10 rounded hover:bg-white/10 transition-colors">
                             <div className="flex items-center gap-2">
-                              <GitCommit className="w-3 h-3 text-white/60 flex-shrink-0" />
+                              <GitCommit className="w-4 h-4 text-white/60 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs text-white truncate">{activity.message}</div>
-                                <div className="text-xs text-white/60 mt-1">
+                                <div className="text-sm text-white truncate">{activity.message}</div>
+                                <div className="text-sm text-white/60 mt-1">
                                   {activity.repo} · {activity.time}
                                 </div>
                               </div>
@@ -142,16 +142,16 @@ export function DashboardPage() {
               <div className="w-64 flex-shrink-0 flex flex-col gap-4">
                 {/* Latest Activity */}
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col max-h-[250px]">
-                  <div className="px-3 py-2 border-b border-white/10">
-                    <h2 className="text-xs font-semibold text-white">Latest activity</h2>
+                  <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+                    <h2 className="text-sm font-semibold text-white">Latest activity</h2>
                   </div>
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto bg-[#0d1117]">
                     <div>
                       {recentActivity.map((activity, idx) => (
-                        <div key={idx} className="w-full px-3 py-2 hover:bg-white/10 transition-colors duration-150 cursor-pointer">
-                          <div className="text-xs text-white/60 mb-1">{activity.time}</div>
-                          <div className="text-xs text-white truncate">{activity.message}</div>
-                          <div className="text-xs text-white/60 mt-1 truncate">{activity.repo}</div>
+                        <div key={idx} className="w-full px-3 py-2 bg-[#0d1117] hover:bg-white/10 transition-colors duration-150 cursor-pointer">
+                          <div className="text-sm text-white/60 mb-1">{activity.time}</div>
+                          <div className="text-sm text-white truncate">{activity.message}</div>
+                          <div className="text-sm text-white/60 mt-1 truncate">{activity.repo}</div>
                         </div>
                       ))}
                     </div>
@@ -160,39 +160,39 @@ export function DashboardPage() {
 
                 {/* Today's Ranking */}
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col">
-                  <div className="px-3 py-2 border-b border-white/10">
+                  <div className="px-3 py-2 border-b border-white/10 bg-white/5">
                     <div className="flex items-center gap-1.5">
-                      <Trophy className="w-3 h-3 text-[#f0883e]" />
-                      <h2 className="text-xs font-semibold text-white">오늘의 랭킹</h2>
+                      <Trophy className="w-4 h-4 text-[#f0883e]" />
+                      <h2 className="text-sm font-semibold text-white">Today's Ranking</h2>
                     </div>
                   </div>
-                  <div>
+                  <div className="bg-[#0d1117]">
                     {todayRanking.slice(0, 3).map((person) => (
                       <div
                         key={person.rank}
-                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-white/10 transition-colors duration-150 cursor-pointer"
+                        className="flex items-center gap-2 w-full px-3 py-2 bg-[#0d1117] hover:bg-white/10 transition-colors duration-150 cursor-pointer"
                       >
                         <div className="flex items-center gap-1">
                           {person.rank <= 3 && (
-                            <Trophy className={`w-3 h-3 ${
+                            <Trophy className={`w-4 h-4 ${
                               person.rank === 1 ? 'text-[#f0883e]' : 
                               person.rank === 2 ? 'text-gray-400' : 
                               'text-[#cd7f32]'
                             }`} />
                           )}
-                          <span className="text-xs font-medium text-white">#{person.rank}</span>
+                          <span className="text-sm font-medium text-white">#{person.rank}</span>
                         </div>
-                        <Avatar className="w-5 h-5 border border-white/20">
+                        <Avatar className="w-6 h-6 border border-white/20">
                           <AvatarImage src={defaultAvatar} />
-                          <AvatarFallback className="bg-white/10 text-white/80 text-[10px]">
+                          <AvatarFallback className="bg-white/10 text-white/80 text-xs">
                             {person.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-white truncate">{person.name}</div>
-                          <div className="text-[10px] text-white/60">{person.commits} commits</div>
+                          <div className="text-sm font-medium text-white truncate">{person.name}</div>
+                          <div className="text-xs text-white/60">{person.commits} commits</div>
                         </div>
-                        <div className="text-xs font-semibold text-[#7aa2f7]">{person.score}</div>
+                        <div className="text-sm font-semibold text-[#7aa2f7]">{person.score}</div>
                       </div>
                     ))}
                   </div>

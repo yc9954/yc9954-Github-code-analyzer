@@ -4,7 +4,6 @@ import { LoginPage } from "@/app/pages/LoginPage";
 import { DashboardPage } from "@/app/pages/DashboardPage";
 import { RepositoryPage } from "@/app/pages/RepositoryPage";
 import { SprintPage } from "@/app/pages/SprintPage";
-import { RankingPage } from "@/app/pages/RankingPage";
 import { CommitsPage } from "@/app/pages/CommitsPage";
 import { SettingsPage } from "@/app/pages/SettingsPage";
 import { SearchPage } from "@/app/pages/SearchPage";
@@ -18,7 +17,7 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/repository" element={<RepositoryPage />} />
         <Route path="/sprint" element={<SprintPage />} />
-        <Route path="/ranking" element={<RankingPage />} />
+        <Route path="/ranking" element={<Navigate to="/sprint?view=ranking" replace />} />
         <Route path="/commits" element={<CommitsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/search" element={<SearchPage />} />

@@ -17,8 +17,6 @@ const navItems = [
   { path: "/repository", label: "Repository", icon: GitBranch },
   { path: "/search", label: "Search", icon: Search },
   { path: "/sprint", label: "Sprint", icon: Zap },
-  { path: "/ranking", label: "Ranking", icon: Trophy },
-  { path: "/commits", label: "Commits", icon: GitCommit },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 

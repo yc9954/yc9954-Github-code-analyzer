@@ -63,10 +63,10 @@ export function RankingPage() {
           <div className="max-w-5xl mx-auto">
             {/* Individual Ranking */}
             {viewType === "individual" && (
-              <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#30363d] hover:bg-transparent">
+                  <TableRow className="border-white/10 bg-white/5 hover:bg-white/5">
                     <TableHead className="text-[#7d8590] font-medium text-[10px] w-12 h-7 py-1">Rank</TableHead>
                     <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Developer</TableHead>
                     <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Score</TableHead>
@@ -77,7 +77,7 @@ export function RankingPage() {
                   {individualRanking.map((person) => (
                     <TableRow 
                       key={person.rank} 
-                      className="border-[#30363d] hover:bg-[#0d1117] cursor-pointer h-8"
+                      className="border-white/10 bg-[#0d1117] hover:bg-white/10 cursor-pointer h-8"
                     >
                       <TableCell className="font-medium text-white py-1">
                         <div className="flex items-center gap-1.5">
@@ -110,10 +110,10 @@ export function RankingPage() {
 
           {/* Team Ranking */}
           {viewType === "team" && (
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#30363d] hover:bg-transparent">
+                  <TableRow className="border-white/10 bg-white/5 hover:bg-white/5">
                     <TableHead className="text-[#7d8590] font-medium text-[10px] w-12 h-7 py-1">Rank</TableHead>
                     <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Team</TableHead>
                     <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Score</TableHead>
@@ -125,7 +125,7 @@ export function RankingPage() {
                   {teamRanking.map((team) => (
                     <TableRow 
                       key={team.rank} 
-                      className="border-[#30363d] hover:bg-[#0d1117] cursor-pointer h-8"
+                      className="border-white/10 bg-[#0d1117] hover:bg-white/10 cursor-pointer h-8"
                     >
                       <TableCell className="font-medium text-white py-1">
                         <div className="flex items-center gap-1.5">

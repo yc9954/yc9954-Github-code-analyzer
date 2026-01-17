@@ -1,17 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { GitBranch, MessageSquare, Send, Copy, CheckCircle2, Github } from "lucide-react";
+import { GitBranch, MessageSquare, Send, Copy, CheckCircle2, Github, GitCommit, CheckCircle, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Badge } from "@/app/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
+import githubAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 const repositories = [
   { id: "1", name: "web-dashboard", fullName: "yc9954/web-dashboard" },
   { id: "2", name: "api-server", fullName: "yc9954/api-server" },
   { id: "3", name: "mobile-app", fullName: "yc9954/mobile-app" },
   { id: "4", name: "github-code-analyzer", fullName: "yc9954/github-code-analyzer" },
+];
+
+// Repository Analysis Data
+const branches = [
+  { name: "main", commits: 234, lastCommit: "2h ago", author: "johndoe", status: "active", ahead: 0, behind: 0 },
+  { name: "develop", commits: 156, lastCommit: "5h ago", author: "janedoe", status: "active", ahead: 12, behind: 0 },
+  { name: "feature/auth", commits: 45, lastCommit: "1d ago", author: "bobsmith", status: "stale", ahead: 8, behind: 15 },
+  { name: "fix/performance", commits: 12, lastCommit: "2d ago", author: "alice", status: "stale", ahead: 3, behind: 23 },
+  { name: "feature/ui-redesign", commits: 28, lastCommit: "3d ago", author: "carol", status: "active", ahead: 5, behind: 8 },
+  { name: "hotfix/login-bug", commits: 6, lastCommit: "4d ago", author: "dave", status: "merged", ahead: 0, behind: 0 },
+];
+
+const contributors = [
+  { name: "johndoe", commits: 145, additions: 12453, deletions: 3421, avatar: "johndoe" },
+  { name: "janedoe", commits: 123, additions: 9876, deletions: 2134, avatar: "janedoe" },
+  { name: "bobsmith", commits: 98, additions: 7654, deletions: 1987, avatar: "bobsmith" },
+  { name: "alice", commits: 87, additions: 6543, deletions: 1654, avatar: "alice" },
+  { name: "carol", commits: 76, additions: 5432, deletions: 1543, avatar: "carol" },
+  { name: "dave", commits: 64, additions: 4321, deletions: 1234, avatar: "dave" },
+];
+
+const languageData = [
+  { name: "TypeScript", percentage: 52, color: "#3178c6" },
+  { name: "JavaScript", percentage: 23, color: "#f7df1e" },
+  { name: "Python", percentage: 15, color: "#3776ab" },
+  { name: "CSS", percentage: 7, color: "#1572b6" },
+  { name: "Other", percentage: 3, color: "#7d8590" },
+];
+
+const qualityMetrics = [
+  { name: "Maintainability", score: 88 },
+  { name: "Complexity", score: 72 },
+  { name: "Duplication", score: 85 },
+  { name: "Coverage", score: 63 },
+];
+
+const recentActivity = [
+  { type: "commit", message: "Fix authentication bug", author: "johndoe", time: "15m ago" },
+  { type: "pr", message: "Add new dashboard features", author: "janedoe", time: "1h ago" },
+  { type: "commit", message: "Update dependencies", author: "bobsmith", time: "2h ago" },
+  { type: "issue", message: "Performance improvements needed", author: "alice", time: "3h ago" },
+  { type: "commit", message: "Refactor API endpoints", author: "carol", time: "4h ago" },
 ];
 
 const commits = [
@@ -90,10 +135,24 @@ const commits = [
 ];
 
 export function CommitsPage() {
+  const [searchParams] = useSearchParams();
   const [selectedRepo, setSelectedRepo] = useState("github-code-analyzer");
+  const [selectedBranch, setSelectedBranch] = useState("main");
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Array<{ role: string; content: string }>>([]);
+
+  // Read URL query parameters
+  useEffect(() => {
+    const repoParam = searchParams.get("repo");
+    const branchParam = searchParams.get("branch");
+    if (repoParam) {
+      setSelectedRepo(repoParam);
+    }
+    if (branchParam) {
+      setSelectedBranch(branchParam);
+    }
+  }, [searchParams]);
 
   const handleSend = () => {
     if (message.trim()) {
@@ -121,29 +180,40 @@ export function CommitsPage() {
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
         {/* Top Header - Compact */}
-        <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#0d1117]">
+        <div className="px-4 py-2.5 border-b border-white/10 bg-[#0d1117]">
           <div className="flex items-center justify-between">
-            <h1 className="text-base font-semibold text-white">Commits</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-base font-semibold text-white">Commits</h1>
+              <span className="text-xs text-white/40">·</span>
+              <span className="text-xs text-white/60">
+                {repositories.find(r => r.name === selectedRepo)?.fullName || selectedRepo}
+              </span>
+              <span className="text-xs text-white/40">·</span>
+              <span className="text-xs text-white/60">{selectedBranch}</span>
+            </div>
             <div className="flex items-center gap-2">
               <Select value={selectedRepo} onValueChange={setSelectedRepo}>
-                <SelectTrigger className="w-48 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
+                <SelectTrigger className="w-48 bg-white/5 border-white/10 text-white h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#161b22] border-[#30363d]">
+                <SelectContent className="bg-white/5 backdrop-blur-md border-white/10">
                   {repositories.map((repo) => (
-                    <SelectItem key={repo.id} value={repo.name} className="text-white focus:bg-[#0d1117] text-xs">
+                    <SelectItem key={repo.id} value={repo.name} className="text-white focus:bg-white/10 text-xs">
                       {repo.fullName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select defaultValue="main">
-                <SelectTrigger className="w-24 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
+              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                <SelectTrigger className="w-24 bg-white/5 border-white/10 text-white h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#161b22] border-[#30363d]">
-                  <SelectItem value="main" className="text-white focus:bg-[#0d1117] text-xs">main</SelectItem>
-                  <SelectItem value="develop" className="text-white focus:bg-[#0d1117] text-xs">develop</SelectItem>
+                <SelectContent className="bg-white/5 backdrop-blur-md border-white/10">
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.name} value={branch.name} className="text-white focus:bg-white/10 text-xs">
+                      {branch.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -153,9 +223,9 @@ export function CommitsPage() {
         {/* Main Content Area */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Panel - Commit List */}
-          <div className="w-[360px] border-r border-[#30363d] bg-[#0d1117] flex flex-col flex-shrink-0">
+          <div className="w-[360px] border-r border-white/10 bg-[#0d1117] flex flex-col flex-shrink-0">
             {/* Commit List Header - Compact */}
-            <div className="px-3 py-2 border-b border-[#30363d] bg-[#161b22] flex items-center justify-between">
+            <div className="px-3 py-2 border-b border-[#30363d] bg-white/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-white">Commits</span>
                 <span className="text-xs text-[#7d8590]">Jan 14</span>
@@ -171,14 +241,14 @@ export function CommitsPage() {
             </div>
 
             {/* Commit List - Dense */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-[#0d1117]">
               <div className="divide-y divide-[#30363d]">
                 {commits.map((commit) => (
                   <div 
                     key={commit.sha} 
                     onClick={() => handleCommitSelect(commit.sha)}
-                    className={`group px-3 py-2 hover:bg-[#161b22] transition-colors cursor-pointer ${
-                      selectedCommit === commit.sha ? 'bg-[#161b22] border-l-2 border-l-[#7aa2f7]' : ''
+                    className={`group px-3 py-2 bg-[#0d1117] hover:bg-white/10 transition-colors cursor-pointer ${
+                      selectedCommit === commit.sha ? 'bg-white/10 border-l-2 border-l-[#7aa2f7]' : ''
                     }`}
                   >
                     <div className="flex items-start gap-2">
@@ -228,75 +298,231 @@ export function CommitsPage() {
             </div>
           </div>
 
-          {/* Right Panel - AI Chat */}
-          <div className="flex-1 flex flex-col bg-[#0d1117] min-w-0">
-            {/* Chat Header - Compact */}
-            <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#161b22]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-white">AI Assistant</span>
-                  {selectedCommit && (
-                    <code className="text-[10px] text-[#7aa2f7] font-mono bg-[#0d1117] px-1.5 py-0.5 rounded border border-[#30363d]">
-                      {selectedCommit.substring(0, 7)}
-                    </code>
-                  )}
+          {/* Middle Panel - Repository Analysis */}
+          <div className="w-[500px] border-r border-white/10 bg-[#0d1117] flex flex-col flex-shrink-0 overflow-y-auto">
+            <div className="p-3 space-y-2">
+              {/* Branches Table */}
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
+                <div className="px-3 py-2 border-b border-white/10 bg-white/5 flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-white">Branches</h3>
+                  <span className="text-[10px] text-white/60">{branches.length} total</span>
                 </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10 bg-white/5 hover:bg-white/5">
+                      <TableHead className="text-white/50 font-medium text-[10px] h-7 py-1">Branch</TableHead>
+                      <TableHead className="text-white/50 font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
+                      <TableHead className="text-white/50 font-medium text-[10px] text-center h-7 py-1">Status</TableHead>
+                      <TableHead className="text-white/50 font-medium text-[10px] h-7 py-1">Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {branches.map((branch) => (
+                      <TableRow key={branch.name} className="border-white/10 bg-[#0d1117] hover:bg-white/10 h-8">
+                        <TableCell className="py-1">
+                          <div className="flex items-center gap-1.5">
+                            <GitBranch className="w-3 h-3 text-white/70" />
+                            <span className="text-xs text-white">{branch.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-white text-right py-1">{branch.commits}</TableCell>
+                        <TableCell className="py-1 text-center">
+                          {branch.status === 'active' ? (
+                            <CheckCircle className="w-3 h-3 text-[#3fb950] mx-auto" />
+                          ) : branch.status === 'merged' ? (
+                            <GitCommit className="w-3 h-3 text-white/70 mx-auto" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3 text-[#f0883e] mx-auto" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-[10px] text-white/70 py-1">{branch.lastCommit}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Contributors Table */}
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
+                <div className="px-3 py-2 border-b border-white/10 bg-white/5 flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-white">Contributors</h3>
+                  <span className="text-[10px] text-white/60">{contributors.length} members</span>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10 bg-white/5 hover:bg-white/5">
+                      <TableHead className="text-white/50 font-medium text-[10px] h-7 py-1">User</TableHead>
+                      <TableHead className="text-white/50 font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
+                      <TableHead className="text-white/50 font-medium text-[10px] text-right h-7 py-1">Changes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contributors.map((contributor, idx) => (
+                      <TableRow key={contributor.name} className="border-white/10 bg-[#0d1117] hover:bg-white/10 h-8">
+                        <TableCell className="py-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-white/70 w-3">#{idx + 1}</span>
+                            <Avatar className="w-4 h-4 border border-white/20">
+                              <AvatarImage src={githubAvatar} />
+                              <AvatarFallback className="bg-white/10 text-white/80 text-[8px]">
+                                {contributor.name.substring(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-white">{contributor.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-white text-right py-1 font-medium">{contributor.commits}</TableCell>
+                        <TableCell className="text-xs text-white text-right py-1">
+                          <span className="text-[#3fb950]">+{contributor.additions.toLocaleString()}</span>
+                          {' '}
+                          <span className="text-[#f85149]">-{contributor.deletions.toLocaleString()}</span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </div>
+          </div>
 
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 min-h-0">
-              {chatMessages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center">
-                  <div className="max-w-md">
-                    <Github className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                    <p className="text-sm text-white/80 mb-2 font-medium">
-                      {selectedCommit 
-                        ? "Ask questions about this commit"
-                        : "Select a commit to start"}
-                    </p>
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      {selectedCommit 
-                        ? "Get detailed insights about code changes, understand the impact of modifications, and receive suggestions for improvements. Ask about specific files, functions, or patterns in this commit."
-                        : "Choose a commit from the list to begin analyzing code changes. Our AI assistant can help you understand modifications, review code quality, and provide insights about the selected commit."}
-                    </p>
+          {/* Right Panel - AI Chat & Analysis Widgets */}
+          <div className="flex-1 flex flex-col bg-[#0d1117] min-w-0">
+            <div className="flex-1 flex overflow-hidden">
+              {/* AI Chat Section */}
+              <div className="flex-1 flex flex-col border-r border-white/10">
+                {/* Chat Header - Compact */}
+                <div className="px-4 py-2.5 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-white">AI Assistant</span>
+                      {selectedCommit && (
+                        <code className="text-[10px] text-[#7aa2f7] font-mono bg-[#0d1117] px-1.5 py-0.5 rounded border border-white/10">
+                          {selectedCommit.substring(0, 7)}
+                        </code>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-3 max-w-3xl mx-auto">
-                  {chatMessages.map((msg, index) => (
-                    <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[75%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
-                        msg.role === 'user' 
-                          ? 'bg-[#7aa2f7] text-white' 
-                          : 'bg-[#161b22] border border-[#30363d] text-white'
-                      }`}>
-                        {msg.content}
+
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-[#0d1117]">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-center">
+                      <div className="max-w-md">
+                        <Github className="w-16 h-16 text-white/40 mx-auto mb-4" />
+                        <p className="text-sm text-white/80 mb-2 font-medium">
+                          {selectedCommit 
+                            ? "Ask questions about this commit"
+                            : "Select a commit to start"}
+                        </p>
+                        <p className="text-xs text-white/50 leading-relaxed">
+                          {selectedCommit 
+                            ? "Get detailed insights about code changes, understand the impact of modifications, and receive suggestions for improvements. Ask about specific files, functions, or patterns in this commit."
+                            : "Choose a commit from the list to begin analyzing code changes. Our AI assistant can help you understand modifications, review code quality, and provide insights about the selected commit."}
+                        </p>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="space-y-3 max-w-3xl mx-auto">
+                      {chatMessages.map((msg, index) => (
+                        <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[75%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
+                            msg.role === 'user' 
+                              ? 'bg-[#7aa2f7] text-white' 
+                              : 'bg-white/5 border border-white/10 text-white'
+                          }`}>
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Chat Input - Compact */}
-            <div className="px-4 py-2.5 border-t border-[#30363d] bg-[#161b22]">
-              <div className="flex gap-2 max-w-3xl mx-auto">
-                <Input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                  placeholder={selectedCommit ? `Ask about ${selectedCommit.substring(0, 7)}...` : "Ask about commits..."}
-                  className="flex-1 bg-[#0d1117] border-[#30363d] text-white text-xs h-8 focus:border-[#7aa2f7]"
-                />
-                <Button 
-                  onClick={handleSend}
-                  size="sm" 
-                  className="bg-[#7aa2f7] hover:bg-[#7dcfff] text-white border-0 h-8 px-3"
-                  disabled={!message.trim()}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </Button>
+                {/* Chat Input - Compact */}
+                <div className="px-4 py-2.5 border-t border-white/10 bg-white/5">
+                  <div className="flex gap-2 max-w-3xl mx-auto">
+                    <Input
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                      placeholder={selectedCommit ? `Ask about ${selectedCommit.substring(0, 7)}...` : "Ask about commits..."}
+                      className="flex-1 bg-[#0d1117] border-white/10 text-white text-xs h-8 focus:border-[#7aa2f7]"
+                    />
+                    <Button 
+                      onClick={handleSend}
+                      size="sm" 
+                      className="bg-[#7aa2f7] hover:bg-[#7dcfff] text-white border-0 h-8 px-3"
+                      disabled={!message.trim()}
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Analysis Widgets */}
+              <div className="w-56 flex-shrink-0 overflow-y-auto p-3 space-y-4">
+                {/* Languages */}
+                <div>
+                  <div className="px-2 py-1.5 mb-2">
+                    <h3 className="text-xs font-medium text-white">Languages</h3>
+                  </div>
+                  <div className="space-y-1.5">
+                    {languageData.map((lang) => (
+                      <div key={lang.name} className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: lang.color }}></div>
+                        <span className="text-xs text-white flex-1 min-w-0 truncate">{lang.name}</span>
+                        <span className="text-xs text-white/60 tabular-nums">{lang.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Code Quality */}
+                <div>
+                  <div className="px-2 py-1.5 mb-2">
+                    <h3 className="text-xs font-medium text-white">Code Quality</h3>
+                  </div>
+                  <div className="space-y-1.5">
+                    {qualityMetrics.map((metric) => (
+                      <div key={metric.name} className="space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-white/60">{metric.name}</span>
+                          <span className="text-[10px] text-white font-medium">{metric.score}</span>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-1">
+                          <div 
+                            className="bg-[#7aa2f7] h-1 rounded-full" 
+                            style={{ width: `${metric.score}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div>
+                  <div className="px-2 py-1.5 mb-2">
+                    <h3 className="text-xs font-medium text-white">Recent Activity</h3>
+                  </div>
+                  <div>
+                    {recentActivity.map((activity, idx) => (
+                      <div key={idx} className="px-2 py-1.5 hover:bg-white/5 transition-colors rounded">
+                        <div className="flex items-start gap-1.5">
+                          <GitCommit className="w-3 h-3 text-white/60 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-white truncate">{activity.message}</div>
+                            <div className="text-[10px] text-white/60 mt-0.5">
+                              {activity.author} · {activity.time}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

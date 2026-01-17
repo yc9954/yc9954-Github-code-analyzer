@@ -62,19 +62,6 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* Security Warning */}
-          <div className="bg-[#f851491a] border border-[#f85149]/30 rounded-lg p-2.5">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-[#f85149] flex-shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-medium text-white mb-0.5">Security Notice</div>
-                <div className="text-[10px] text-[#7d8590]">
-                  Never commit .env files or API keys to your repositories. Use environment variables and secure secret management.
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Profile */}
           <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
             <div className="px-3 py-2 border-b border-[#30363d]">
