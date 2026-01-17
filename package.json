@@ -8,7 +8,8 @@
     "dev": "vite",
     "clean": "rm -rf node_modules/.vite dist",
     "clean:all": "rm -rf node_modules/.vite dist node_modules package-lock.json && npm install",
-    "clean:cache": "rm -rf node_modules/.vite"
+    "clean:cache": "rm -rf node_modules/.vite",
+    "restart": "npm run clean:cache && npm run dev"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
