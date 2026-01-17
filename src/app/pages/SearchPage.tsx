@@ -109,38 +109,13 @@ export function SearchPage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#0d1117]">
-        {/* Top Search Bar */}
-        <div className="border-b border-[#30363d] bg-[#161b22]">
-          <div className="max-w-[1280px] mx-auto px-4 py-4">
-            <form onSubmit={handleSearch} className="flex items-center gap-4">
-              <div className="flex-1 relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                  <Code className="w-4 h-4 text-[#6e7681]" />
-                </div>
-                <Input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search GitHub"
-                  className="w-full h-10 pl-10 pr-4 bg-[#0d1117] border-[#30363d] text-white placeholder:text-[#6e7681] focus:border-[#58a6ff] focus:ring-2 focus:ring-[#58a6ff]/20"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="bg-[#238636] hover:bg-[#2ea043] text-white border-0 h-10 px-6"
-              >
-                Search
-              </Button>
-            </form>
-          </div>
-        </div>
-
-        <div className="max-w-[1280px] mx-auto px-4 py-6">
-          <div className="flex gap-6">
-            {/* Left Sidebar - Filters */}
-            <aside className="w-64 flex-shrink-0">
-              <div className="sticky top-6 space-y-6">
+      <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
+        <div className="flex-1 overflow-y-auto">
+          <div className="w-full px-4 py-6">
+            <div className="flex gap-6 max-w-[1280px] mx-auto">
+              {/* Left Sidebar - Filters */}
+              <aside className="w-64 flex-shrink-0">
+                <div className="sticky top-6 space-y-6">
                 <div>
                   <h3 className="text-sm font-semibold text-white mb-3">Filter by</h3>
                   <div className="space-y-1">
@@ -387,6 +362,7 @@ export function SearchPage() {
                 </div>
               )}
             </main>
+            </div>
           </div>
         </div>
       </div>

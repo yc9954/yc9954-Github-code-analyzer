@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Trophy, TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
+import { Progress } from "@/app/components/ui/progress";
+import defaultAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 // Mock data
 const allSprints = [
@@ -30,6 +32,14 @@ const myRepositories = [
   { id: 1, name: "web-dashboard", selected: false },
   { id: 2, name: "api-server", selected: false },
   { id: 3, name: "mobile-app", selected: false },
+];
+
+const teamMembers = [
+  { name: "Alice Johnson", username: "alicej", role: "Lead", commits: 145, contribution: 28 },
+  { name: "Bob Smith", username: "bobsmith", role: "Developer", commits: 123, contribution: 24 },
+  { name: "Carol White", username: "carolw", role: "Developer", commits: 98, contribution: 19 },
+  { name: "David Brown", username: "davidb", role: "Developer", commits: 87, contribution: 17 },
+  { name: "Emma Davis", username: "emmad", role: "Designer", commits: 62, contribution: 12 },
 ];
 
 const commitHistory = [
@@ -204,6 +214,51 @@ export function SprintPage() {
                     <Button className="w-full bg-[#238636] hover:bg-[#2ea043] text-white border-0 h-6 text-[10px]">
                       Register for Sprint
                     </Button>
+                  </div>
+
+                  {/* Team Members */}
+                  <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
+                    <div className="px-3 py-2 border-b border-[#30363d]">
+                      <h3 className="text-[10px] font-medium text-white">Team Members</h3>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-[#30363d] hover:bg-transparent">
+                          <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Member</TableHead>
+                          <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Role</TableHead>
+                          <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
+                          <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Contribution</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {teamMembers.map((member) => (
+                          <TableRow key={member.username} className="border-[#30363d] hover:bg-[#0d1117] h-8">
+                            <TableCell className="py-1">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="w-5 h-5 border border-[#30363d]">
+                                  <AvatarImage src={defaultAvatar} />
+                                  <AvatarFallback className="bg-[#21262d] text-white text-[10px]">
+                                    {member.name.split(' ').map(n => n[0]).join('')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="text-xs font-medium text-white">{member.name}</div>
+                                  <div className="text-[10px] text-[#7d8590]">@{member.username}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-[#7d8590] py-1">{member.role}</TableCell>
+                            <TableCell className="text-xs text-white text-right py-1">{member.commits}</TableCell>
+                            <TableCell className="py-1">
+                              <div className="flex items-center gap-1.5">
+                                <Progress value={member.contribution} className="flex-1 h-1" />
+                                <span className="text-[10px] text-[#7d8590] min-w-[35px]">{member.contribution}%</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
