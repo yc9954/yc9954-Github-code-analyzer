@@ -542,7 +542,41 @@ export function CommitsPage() {
                               ? 'bg-[#7aa2f7] text-white' 
                               : 'bg-white/5 border border-white/10 text-white'
                           }`}>
-                            {msg.content}
+                            <div className="whitespace-pre-wrap break-words">
+                              {msg.content.split('\n').map((line, lineIndex, lines) => {
+                                // 빈 줄은 문단 구분으로 처리
+                                if (line.trim() === '' && lineIndex < lines.length - 1) {
+                                  return <div key={lineIndex} className="h-3" />;
+                                }
+                                // 마크다운 스타일 처리 (간단한 버전)
+                                const parts = line.split(/(\*\*.*?\*\*|##|###|####|`.*?`)/);
+                                return (
+                                  <div key={lineIndex} className="mb-1 last:mb-0">
+                                    {parts.map((part, partIndex) => {
+                                      // 볼드 처리
+                                      if (part.startsWith('**') && part.endsWith('**')) {
+                                        return <strong key={partIndex} className="font-semibold">{part.slice(2, -2)}</strong>;
+                                      }
+                                      // 헤딩 처리
+                                      if (part.startsWith('####')) {
+                                        return <h4 key={partIndex} className="font-semibold text-sm mt-2 mb-1">{part.slice(4).trim()}</h4>;
+                                      }
+                                      if (part.startsWith('###')) {
+                                        return <h3 key={partIndex} className="font-semibold text-base mt-3 mb-1">{part.slice(3).trim()}</h3>;
+                                      }
+                                      if (part.startsWith('##')) {
+                                        return <h2 key={partIndex} className="font-semibold text-lg mt-4 mb-2">{part.slice(2).trim()}</h2>;
+                                      }
+                                      // 인라인 코드 처리
+                                      if (part.startsWith('`') && part.endsWith('`')) {
+                                        return <code key={partIndex} className="bg-white/10 px-1 py-0.5 rounded text-[11px] font-mono">{part.slice(1, -1)}</code>;
+                                      }
+                                      return <span key={partIndex}>{part}</span>;
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       ))}
