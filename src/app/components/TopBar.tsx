@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Search, Menu, User, Settings, LogOut, CreditCard, Keyboard, Users, UserPlus, Mail, MessageSquare, PlusCircle, Plus, Github, LifeBuoy, Cloud } from "lucide-react";
+import { Search, Menu, User, Settings, LogOut, CreditCard, Keyboard, Users, UserPlus, Mail, MessageSquare, PlusCircle, Plus, Github, LifeBuoy, Cloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import {
@@ -16,6 +16,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuShortcut,
 } from "@/app/components/ui/dropdown-menu";
+import { ActivityDropdown } from "@/app/components/ui/activity-dropdown";
 import githubAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 interface TopBarProps {
@@ -68,42 +69,7 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
         {/* Right side */}
         <div className="flex items-center gap-3">
           {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="relative p-2 text-[#7d8590] hover:text-white bg-white/5 backdrop-blur-sm hover:bg-white/10 rounded-lg transition-all border border-white/10">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-[#f85149] rounded-full ring-2 ring-[#010409]"></span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 bg-neutral-900 border-neutral-800">
-              <DropdownMenuLabel className="text-white">Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-neutral-800" />
-              <div className="max-h-[300px] overflow-y-auto">
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                  <div className="flex flex-col gap-1 w-full">
-                    <div className="text-sm font-medium">New commit in repository</div>
-                    <div className="text-xs text-neutral-400">2 hours ago</div>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                  <div className="flex flex-col gap-1 w-full">
-                    <div className="text-sm font-medium">Pull request reviewed</div>
-                    <div className="text-xs text-neutral-400">5 hours ago</div>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                  <div className="flex flex-col gap-1 w-full">
-                    <div className="text-sm font-medium">New issue assigned</div>
-                    <div className="text-xs text-neutral-400">1 day ago</div>
-                  </div>
-                </DropdownMenuItem>
-              </div>
-              <DropdownMenuSeparator className="bg-neutral-800" />
-              <DropdownMenuItem className="text-white focus:bg-neutral-800 justify-center">
-                View all notifications
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ActivityDropdown />
 
           {/* User Menu */}
           <DropdownMenu>
