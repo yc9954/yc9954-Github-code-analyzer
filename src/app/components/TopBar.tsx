@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search, Menu, User, Settings, LogOut, CreditCard, Keyboard, Users, UserPlus, Mail, MessageSquare, PlusCircle, Plus, Github, LifeBuoy, Cloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import {
@@ -9,6 +9,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuShortcut,
 } from "@/app/components/ui/dropdown-menu";
 import githubAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
@@ -62,15 +68,47 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
         {/* Right side */}
         <div className="flex items-center gap-3">
           {/* Notifications */}
-          <button className="relative p-2 text-[#7d8590] hover:text-white bg-white/5 backdrop-blur-sm hover:bg-white/10 rounded-lg transition-all border border-white/10">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#f85149] rounded-full ring-2 ring-[#010409]"></span>
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="relative p-2 text-[#7d8590] hover:text-white bg-white/5 backdrop-blur-sm hover:bg-white/10 rounded-lg transition-all border border-white/10">
+                <Bell className="w-4 h-4" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-[#f85149] rounded-full ring-2 ring-[#010409]"></span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 bg-neutral-900 border-neutral-800">
+              <DropdownMenuLabel className="text-white">Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-neutral-800" />
+              <div className="max-h-[300px] overflow-y-auto">
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <div className="flex flex-col gap-1 w-full">
+                    <div className="text-sm font-medium">New commit in repository</div>
+                    <div className="text-xs text-neutral-400">2 hours ago</div>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <div className="flex flex-col gap-1 w-full">
+                    <div className="text-sm font-medium">Pull request reviewed</div>
+                    <div className="text-xs text-neutral-400">5 hours ago</div>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <div className="flex flex-col gap-1 w-full">
+                    <div className="text-sm font-medium">New issue assigned</div>
+                    <div className="text-xs text-neutral-400">1 day ago</div>
+                  </div>
+                </DropdownMenuItem>
+              </div>
+              <DropdownMenuSeparator className="bg-neutral-800" />
+              <DropdownMenuItem className="text-white focus:bg-neutral-800 justify-center">
+                View all notifications
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* User Menu */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="focus:outline-none">
-              <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10">
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10 cursor-pointer">
                 <Avatar className="w-7 h-7 border border-white/10">
                   <AvatarImage src={githubAvatar} />
                   <AvatarFallback className="bg-gradient-to-br from-[#7aa2f7]/20 to-[#bb9af7]/20 text-white text-xs">JD</AvatarFallback>
@@ -81,21 +119,78 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-[#161b22]/95 backdrop-blur-xl border-white/10">
-              <DropdownMenuLabel className="text-[#c9d1d9]">My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem onClick={() => navigate('/settings')} className="text-[#c9d1d9] focus:bg-white/5 focus:text-white">
-                Profile
+            <DropdownMenuContent align="end" className="w-56 bg-neutral-900 border-neutral-800">
+              <DropdownMenuLabel className="text-white">My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-neutral-800" />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  <span>Billing</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <Keyboard className="mr-2 h-4 w-4" />
+                  <span>Keyboard shortcuts</span>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator className="bg-neutral-800" />
+              <DropdownMenuGroup>
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Team</span>
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-white focus:bg-neutral-800">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    <span>Invite users</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="bg-neutral-900 border-neutral-800">
+                      <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                        <Mail className="mr-2 h-4 w-4" />
+                        <span>Email</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        <span>Message</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-neutral-800" />
+                      <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        <span>More...</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>New Team</span>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator className="bg-neutral-800" />
+              <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                <Github className="mr-2 h-4 w-4" />
+                <span>GitHub</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-[#c9d1d9] focus:bg-white/5 focus:text-white">
-                Billing
+              <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                <LifeBuoy className="mr-2 h-4 w-4" />
+                <span>Support</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/team')} className="text-[#c9d1d9] focus:bg-white/5 focus:text-white">
-                Team
+              <DropdownMenuItem disabled className="text-neutral-500 focus:bg-neutral-800">
+                <Cloud className="mr-2 h-4 w-4" />
+                <span>API</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem onClick={handleLogout} className="text-[#c9d1d9] focus:bg-white/5 focus:text-white">
-                Log out
+              <DropdownMenuSeparator className="bg-neutral-800" />
+              <DropdownMenuItem onClick={handleLogout} className="text-white focus:bg-neutral-800">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
