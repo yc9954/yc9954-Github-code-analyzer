@@ -2,13 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/app/components/ui/dialog";
 
 export interface CustomDot {
   lat: number;
@@ -37,11 +30,16 @@ export default function RotatingEarth({
   customDots = []
 }: RotatingEarthProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDot, setSelectedDot] = useState<CustomDot | null>(null);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
   const projectionRef = useRef<d3.GeoProjection | null>(null);
   const containerDimensionsRef = useRef<{ width: number; height: number; radius: number } | null>(null);
+  const renderCallbackRef = useRef<(() => void) | null>(null);
+  const selectedDotRef = useRef<CustomDot | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -63,10 +61,13 @@ export default function RotatingEarth({
     context.scale(dpr, dpr);
 
     // Create projection and path generator for Canvas
+    // Initial rotation: [longitude, latitude] - slightly rotated for better view (reversed)
+    // Initial scale: 1.4x for more zoomed in view
     const projection = d3
       .geoOrthographic()
-      .scale(radius)
+      .scale(radius * 1.6) // More zoomed in (slightly increased from 1.3)
       .translate([containerWidth / 2, containerHeight / 2])
+      .rotate([-30, -20]) // Initial rotation: -30 degrees longitude, -20 degrees latitude (reversed)
       .clipAngle(90);
 
     // Store projection and dimensions for click detection
@@ -238,7 +239,30 @@ export default function RotatingEarth({
           context.shadowBlur = 0;
         }
       });
+
+      // Update popup position if a dot is selected
+      // Use ref to get the latest selectedDot value
+      const currentSelectedDot = selectedDotRef.current;
+      if (currentSelectedDot && projectionRef.current) {
+        const projected = projectionRef.current([currentSelectedDot.lng, currentSelectedDot.lat] as [number, number]);
+        if (projected && containerRef.current) {
+          const rect = canvas.getBoundingClientRect();
+          const containerRect = containerRef.current.getBoundingClientRect();
+          setPopupPosition({
+            x: rect.left - containerRect.left + projected[0],
+            y: rect.top - containerRect.top + projected[1]
+          });
+        } else {
+          // Dot is on the back side of the globe or not visible
+          setPopupPosition(null);
+        }
+      } else if (!currentSelectedDot) {
+        setPopupPosition(null);
+      }
     };
+
+    // Store render function reference for position updates
+    renderCallbackRef.current = render;
 
     const loadWorldData = async () => {
       try {
@@ -263,6 +287,10 @@ export default function RotatingEarth({
 
         render();
         setIsLoading(false);
+        // Trigger fade-in effect after loading completes
+        setTimeout(() => {
+          setIsVisible(true);
+        }, 50);
       } catch (err) {
         setError("Failed to load land map data");
         setIsLoading(false);
@@ -270,14 +298,20 @@ export default function RotatingEarth({
     };
 
     // Set up rotation and interaction
-    const rotation = [0, 0];
+    // Start with initial rotation from projection
+    const initialRotation = projection.rotate();
+    const rotation: [number, number, number] = [
+      initialRotation[0] || 0,
+      initialRotation[1] || 0,
+      initialRotation[2] || 0
+    ];
     let autoRotate = true;
-    let rotationSpeed = 0.5; // Initial speed
+    let rotationSpeed = 0.3; // Initial speed (reduced from 0.5)
     const slowRotationSpeed = 0.1; // Slower speed after interaction
 
     const rotate = () => {
       if (autoRotate) {
-        rotation[0] += rotationSpeed;
+        rotation[0] += rotationSpeed; // Original rotation direction
         projection.rotate(rotation);
         render();
       }
@@ -294,7 +328,7 @@ export default function RotatingEarth({
 
       const startX = event.clientX;
       const startY = event.clientY;
-      const startRotation = [...rotation];
+      const startRotation: [number, number, number] = [rotation[0], rotation[1], rotation[2]];
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
         const sensitivity = 0.5;
@@ -358,6 +392,16 @@ export default function RotatingEarth({
 
       if (closestDot) {
         setSelectedDot(closestDot);
+        selectedDotRef.current = closestDot;
+        // Update position immediately
+        if (renderCallbackRef.current) {
+          renderCallbackRef.current();
+        }
+      } else {
+        // Clicked on empty space, close popup
+        setSelectedDot(null);
+        selectedDotRef.current = null;
+        setPopupPosition(null);
       }
     };
 
@@ -377,6 +421,16 @@ export default function RotatingEarth({
     };
   }, [width, height, customDots]);
 
+  // Update popup position when selectedDot changes or on render
+  useEffect(() => {
+    selectedDotRef.current = selectedDot;
+    if (selectedDot && renderCallbackRef.current) {
+      renderCallbackRef.current();
+    } else if (!selectedDot) {
+      setPopupPosition(null);
+    }
+  }, [selectedDot]);
+
   if (error) {
     return (
       <div className={`dark flex items-center justify-center bg-card rounded-2xl p-8 ${className}`}>
@@ -389,66 +443,114 @@ export default function RotatingEarth({
   }
 
   return (
-    <>
-      <div className={`relative ${className}`}>
-        <canvas
-          ref={canvasRef}
-          className="w-full h-auto rounded-2xl bg-background dark cursor-pointer"
-          style={{ maxWidth: "100%", height: "auto" }}
-        />
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-white/60 text-sm">Loading Earth...</div>
-          </div>
-        )}
-        <div className="absolute bottom-4 left-4 text-xs text-muted-foreground px-2 py-1 rounded-md dark bg-neutral-900">
-          Drag to rotate • Scroll to zoom • Click dots for details
+    <div ref={containerRef} className={`relative ${className}`}>
+      <canvas
+        ref={canvasRef}
+        className="w-full h-auto rounded-2xl bg-background dark cursor-pointer"
+        style={{ 
+          maxWidth: "100%", 
+          height: "auto",
+          opacity: isVisible ? 1 : 0,
+          transition: "opacity 3s cubic-bezier(0.98, 0.02, 0.9, 0.1)"
+        }}
+      />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-white/60 text-sm">Loading Earth...</div>
         </div>
+      )}
+      <div className="absolute bottom-4 left-4 text-xs text-muted-foreground px-2 py-1 rounded-md dark bg-neutral-900">
+        Drag to rotate • Scroll to zoom • Click dots for details
       </div>
 
-      <Dialog open={!!selectedDot} onOpenChange={(open) => !open && setSelectedDot(null)}>
-        <DialogContent className="bg-neutral-900 border-neutral-800 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              {selectedDot?.type === "sprint" ? (
-                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-              ) : (
-                <span className="w-3 h-3 rounded-full bg-orange-500"></span>
-              )}
-              {selectedDot?.title || (selectedDot?.type === "sprint" ? "Sprint" : "Issue")}
-            </DialogTitle>
-            <DialogDescription className="text-neutral-400">
-              {selectedDot?.type === "sprint" ? "Sprint Event" : "Issue Event"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 mt-4">
-            {selectedDot?.location && (
-              <div>
-                <p className="text-sm font-medium text-neutral-300">Location</p>
-                <p className="text-sm text-neutral-400">{selectedDot.location}</p>
+      {/* Liquid Glass UI Popup */}
+      {selectedDot && popupPosition && (
+        <div
+          className="absolute pointer-events-none z-50"
+          style={{
+            left: `${popupPosition.x}px`,
+            top: `${popupPosition.y}px`,
+            transform: "translate(-50%, -100%)",
+            marginTop: "-10px",
+          }}
+        >
+          <div
+            className="backdrop-blur-xl bg-white/10 dark:bg-black/20 border border-white/20 dark:border-white/10 rounded-2xl p-4 shadow-2xl min-w-[280px] max-w-[320px]"
+            style={{
+              backdropFilter: "blur(20px) saturate(180%)",
+              WebkitBackdropFilter: "blur(20px) saturate(180%)",
+              boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-3 h-3 rounded-full flex-shrink-0 mt-1 ${
+                  selectedDot.type === "sprint" ? "bg-blue-500" : "bg-orange-500"
+                }`}
+                style={{
+                  boxShadow: `0 0 10px ${
+                    selectedDot.type === "sprint" ? "rgba(59, 130, 246, 0.5)" : "rgba(251, 146, 60, 0.5)"
+                  }`,
+                }}
+              />
+              <div className="flex-1 space-y-2">
+                <div>
+                  <h3 className="text-white font-semibold text-base leading-tight">
+                    {selectedDot.title || (selectedDot.type === "sprint" ? "Sprint" : "Issue")}
+                  </h3>
+                  <p className="text-white/60 text-xs mt-0.5">
+                    {selectedDot.type === "sprint" ? "Sprint Event" : "Issue Event"}
+                  </p>
+                </div>
+                
+                {selectedDot.location && (
+                  <div className="pt-1 border-t border-white/10">
+                    <p className="text-white/80 text-xs font-medium mb-0.5">Location</p>
+                    <p className="text-white/60 text-xs">{selectedDot.location}</p>
+                  </div>
+                )}
+                
+                {selectedDot.date && (
+                  <div>
+                    <p className="text-white/80 text-xs font-medium mb-0.5">Date</p>
+                    <p className="text-white/60 text-xs">{selectedDot.date}</p>
+                  </div>
+                )}
+                
+                {selectedDot.description && (
+                  <div>
+                    <p className="text-white/80 text-xs font-medium mb-0.5">Description</p>
+                    <p className="text-white/60 text-xs leading-relaxed">{selectedDot.description}</p>
+                  </div>
+                )}
               </div>
-            )}
-            {selectedDot?.date && (
-              <div>
-                <p className="text-sm font-medium text-neutral-300">Date</p>
-                <p className="text-sm text-neutral-400">{selectedDot.date}</p>
-              </div>
-            )}
-            {selectedDot?.description && (
-              <div>
-                <p className="text-sm font-medium text-neutral-300">Description</p>
-                <p className="text-sm text-neutral-400">{selectedDot.description}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-sm font-medium text-neutral-300">Coordinates</p>
-              <p className="text-sm text-neutral-400">
-                {selectedDot?.lat?.toFixed(4)}, {selectedDot?.lng?.toFixed(4)}
-              </p>
+              
+              <button
+                onClick={() => {
+                  setSelectedDot(null);
+                  setPopupPosition(null);
+                }}
+                className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors pointer-events-auto"
+                aria-label="Close"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      )}
+    </div>
   );
 }
