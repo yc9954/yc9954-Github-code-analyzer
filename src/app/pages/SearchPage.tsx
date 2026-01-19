@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
+import { Checkbox } from "@/app/components/ui/checkbox";
 import { Star, GitBranch, Calendar, BookOpen, Code, AlertCircle, GitPullRequest, MessageSquare, Users, ChevronDown } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
@@ -90,7 +91,7 @@ export function SearchPage() {
   const queryFromUrl = searchParams.get("q") || "";
   const [searchQuery, setSearchQuery] = useState(queryFromUrl);
   const [activeFilter, setActiveFilter] = useState<"code" | "repositories" | "issues" | "pullRequests" | "discussions" | "users">("repositories");
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   // Update search query when URL changes
   useEffect(() => {
@@ -211,14 +212,26 @@ export function SearchPage() {
                       {languages.map((lang) => (
                         <button
                           key={lang}
-                          onClick={() => setSelectedLanguage(selectedLanguage === lang ? null : lang)}
-                          className={`w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 ${
-                            selectedLanguage === lang
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "text-white hover:bg-neutral-900"
-                          }`}
+                          onClick={() => {
+                            setSelectedLanguages((prev) =>
+                              prev.includes(lang)
+                                ? prev.filter((l) => l !== lang)
+                                : [...prev, lang]
+                            );
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 text-white hover:bg-neutral-900"
                         >
-                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                          <Checkbox
+                            checked={selectedLanguages.includes(lang)}
+                            onCheckedChange={(checked) => {
+                              setSelectedLanguages((prev) =>
+                                checked
+                                  ? [...prev, lang]
+                                  : prev.filter((l) => l !== lang)
+                              );
+                            }}
+                            className="border-neutral-700 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                          />
                           <span className="text-white">{lang}</span>
                         </button>
                       ))}
@@ -279,7 +292,7 @@ export function SearchPage() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-base font-semibold text-blue-400 hover:underline cursor-pointer">
+                              <h3 className="text-base font-semibold text-white hover:underline cursor-pointer">
                                 {repo.owner}/{repo.name}
                               </h3>
                               {repo.isArchived && (
