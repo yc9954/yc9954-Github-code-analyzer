@@ -2,12 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+
+export interface CustomDot {
+  lat: number;
+  lng: number;
+  color?: string;
+  size?: number;
+  type?: "sprint" | "issue";
+  title?: string;
+  description?: string;
+  location?: string;
+  date?: string;
+  [key: string]: any; // Allow additional custom properties
+}
 
 interface RotatingEarthProps {
   width?: number;
   height?: number;
   className?: string;
-  customDots?: Array<{ lat: number; lng: number; color?: string; size?: number }>;
+  customDots?: CustomDot[];
 }
 
 export default function RotatingEarth({ 
@@ -19,6 +39,9 @@ export default function RotatingEarth({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDot, setSelectedDot] = useState<CustomDot | null>(null);
+  const projectionRef = useRef<d3.GeoProjection | null>(null);
+  const containerDimensionsRef = useRef<{ width: number; height: number; radius: number } | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -45,6 +68,10 @@ export default function RotatingEarth({
       .scale(radius)
       .translate([containerWidth / 2, containerHeight / 2])
       .clipAngle(90);
+
+    // Store projection and dimensions for click detection
+    projectionRef.current = projection;
+    containerDimensionsRef.current = { width: containerWidth, height: containerHeight, radius };
 
     const path = d3.geoPath().projection(projection).context(context);
 
@@ -245,7 +272,8 @@ export default function RotatingEarth({
     // Set up rotation and interaction
     const rotation = [0, 0];
     let autoRotate = true;
-    const rotationSpeed = 0.5;
+    let rotationSpeed = 0.5; // Initial speed
+    const slowRotationSpeed = 0.1; // Slower speed after interaction
 
     const rotate = () => {
       if (autoRotate) {
@@ -259,7 +287,11 @@ export default function RotatingEarth({
     const rotationTimer = d3.timer(rotate);
 
     const handleMouseDown = (event: MouseEvent) => {
-      autoRotate = false;
+      // Slow down rotation speed when user interacts
+      if (rotationSpeed > slowRotationSpeed) {
+        rotationSpeed = slowRotationSpeed;
+      }
+
       const startX = event.clientX;
       const startY = event.clientY;
       const startRotation = [...rotation];
@@ -280,10 +312,6 @@ export default function RotatingEarth({
       const handleMouseUp = () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
-
-        setTimeout(() => {
-          autoRotate = true;
-        }, 10);
       };
 
       document.addEventListener("mousemove", handleMouseMove);
@@ -298,8 +326,44 @@ export default function RotatingEarth({
       render();
     };
 
+    const handleClick = (event: MouseEvent) => {
+      if (!projectionRef.current || !containerDimensionsRef.current) return;
+
+      // Slow down rotation speed after interaction
+      if (rotationSpeed > slowRotationSpeed) {
+        rotationSpeed = slowRotationSpeed;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      // Find the closest custom dot to the click position
+      let closestDot: CustomDot | null = null;
+      let minDistance = Infinity;
+      const clickThreshold = 30; // pixels
+
+      customDots.forEach((dot) => {
+        const projected = projectionRef.current!([dot.lng, dot.lat] as [number, number]);
+        if (projected) {
+          const distance = Math.sqrt(
+            Math.pow(projected[0] - x, 2) + Math.pow(projected[1] - y, 2)
+          );
+          if (distance < clickThreshold && distance < minDistance) {
+            minDistance = distance;
+            closestDot = dot;
+          }
+        }
+      });
+
+      if (closestDot) {
+        setSelectedDot(closestDot);
+      }
+    };
+
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("wheel", handleWheel);
+    canvas.addEventListener("click", handleClick);
 
     // Load the world data
     loadWorldData();
@@ -309,6 +373,7 @@ export default function RotatingEarth({
       rotationTimer.stop();
       canvas.removeEventListener("mousedown", handleMouseDown);
       canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("click", handleClick);
     };
   }, [width, height, customDots]);
 
@@ -324,20 +389,66 @@ export default function RotatingEarth({
   }
 
   return (
-    <div className={`relative ${className}`}>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-auto rounded-2xl bg-background dark"
-        style={{ maxWidth: "100%", height: "auto" }}
-      />
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-white/60 text-sm">Loading Earth...</div>
+    <>
+      <div className={`relative ${className}`}>
+        <canvas
+          ref={canvasRef}
+          className="w-full h-auto rounded-2xl bg-background dark cursor-pointer"
+          style={{ maxWidth: "100%", height: "auto" }}
+        />
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-white/60 text-sm">Loading Earth...</div>
+          </div>
+        )}
+        <div className="absolute bottom-4 left-4 text-xs text-muted-foreground px-2 py-1 rounded-md dark bg-neutral-900">
+          Drag to rotate • Scroll to zoom • Click dots for details
         </div>
-      )}
-      <div className="absolute bottom-4 left-4 text-xs text-muted-foreground px-2 py-1 rounded-md dark bg-neutral-900">
-        Drag to rotate • Scroll to zoom
       </div>
-    </div>
+
+      <Dialog open={!!selectedDot} onOpenChange={(open) => !open && setSelectedDot(null)}>
+        <DialogContent className="bg-neutral-900 border-neutral-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              {selectedDot?.type === "sprint" ? (
+                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+              ) : (
+                <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+              )}
+              {selectedDot?.title || (selectedDot?.type === "sprint" ? "Sprint" : "Issue")}
+            </DialogTitle>
+            <DialogDescription className="text-neutral-400">
+              {selectedDot?.type === "sprint" ? "Sprint Event" : "Issue Event"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {selectedDot?.location && (
+              <div>
+                <p className="text-sm font-medium text-neutral-300">Location</p>
+                <p className="text-sm text-neutral-400">{selectedDot.location}</p>
+              </div>
+            )}
+            {selectedDot?.date && (
+              <div>
+                <p className="text-sm font-medium text-neutral-300">Date</p>
+                <p className="text-sm text-neutral-400">{selectedDot.date}</p>
+              </div>
+            )}
+            {selectedDot?.description && (
+              <div>
+                <p className="text-sm font-medium text-neutral-300">Description</p>
+                <p className="text-sm text-neutral-400">{selectedDot.description}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium text-neutral-300">Coordinates</p>
+              <p className="text-sm text-neutral-400">
+                {selectedDot?.lat?.toFixed(4)}, {selectedDot?.lng?.toFixed(4)}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
