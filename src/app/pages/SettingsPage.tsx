@@ -53,17 +53,17 @@ export function SettingsPage() {
             {/* Profile - Dialog Style */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
               <div className="px-3 py-2 border-b border-neutral-800">
-                <h3 className="text-xs font-medium text-white">Profile</h3>
+                <h3 className="text-sm font-medium text-white">Profile</h3>
               </div>
               <div className="p-3 space-y-4">
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10 border border-neutral-800">
+                  <Avatar className="w-12 h-12 border border-neutral-800">
                     <AvatarImage src={profileImage} />
-                    <AvatarFallback className="bg-neutral-800 text-white text-xs">JD</AvatarFallback>
+                    <AvatarFallback className="bg-neutral-800 text-white text-sm">JD</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <div className="text-xs font-medium text-white mb-0.5">Profile Picture</div>
-                    <div className="text-[10px] text-neutral-400">Synced from GitHub</div>
+                    <div className="text-sm font-medium text-white mb-0.5">Profile Picture</div>
+                    <div className="text-xs text-neutral-400">Synced from GitHub</div>
                   </div>
                 </div>
 
@@ -71,28 +71,28 @@ export function SettingsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-[10px] text-neutral-400 mb-1">Full Name</div>
-                    <div className="text-xs text-white">John Doe</div>
+                    <div className="text-xs text-neutral-400 mb-1">Full Name</div>
+                    <div className="text-sm text-white">John Doe</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-neutral-400 mb-1">Role</div>
-                    <div className="text-xs text-white">Web Developer</div>
+                    <div className="text-xs text-neutral-400 mb-1">Role</div>
+                    <div className="text-sm text-white">Web Developer</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-neutral-400 mb-1">Email</div>
-                    <div className="text-xs text-white">john.doe@example.com</div>
+                    <div className="text-xs text-neutral-400 mb-1">Email</div>
+                    <div className="text-sm text-white">john.doe@example.com</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-neutral-400 mb-1">Location</div>
-                    <div className="text-xs text-white">San Francisco, USA</div>
+                    <div className="text-xs text-neutral-400 mb-1">Location</div>
+                    <div className="text-sm text-white">San Francisco, USA</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-neutral-400 mb-1">Company</div>
-                    <div className="text-xs text-white">DevAnalytics</div>
+                    <div className="text-xs text-neutral-400 mb-1">Company</div>
+                    <div className="text-sm text-white">DevAnalytics</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-neutral-400 mb-1">GitHub</div>
-                    <div className="text-xs text-white">github.com/johndoe</div>
+                    <div className="text-xs text-neutral-400 mb-1">GitHub</div>
+                    <div className="text-sm text-white">github.com/johndoe</div>
                   </div>
                 </div>
 
@@ -102,7 +102,7 @@ export function SettingsPage() {
                       Edit Profile
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-xl p-0 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
+                  <DialogContent className="sm:max-w-xl p-0 overflow-hidden rounded-2xl border-2 border-neutral-700 bg-neutral-900 shadow-2xl">
                     <div
                       className="px-6 py-4 h-36"
                       style={{
@@ -252,27 +252,27 @@ export function SettingsPage() {
             {/* Notifications */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
               <div className="px-3 py-2 border-b border-neutral-800">
-                <h3 className="text-xs font-medium text-white">Notifications</h3>
+                <h3 className="text-sm font-medium text-white">Notifications</h3>
               </div>
               <div className="divide-y divide-neutral-800">
                 <div className="flex items-center justify-between px-3 py-2">
                   <div>
-                    <div className="text-xs text-white mb-0.5">Email notifications</div>
-                    <div className="text-[10px] text-neutral-400">Receive email updates about your activity</div>
+                    <div className="text-sm text-white mb-0.5">Email notifications</div>
+                    <div className="text-xs text-neutral-400">Receive email updates about your activity</div>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <div className="flex items-center justify-between px-3 py-2">
                   <div>
-                    <div className="text-xs text-white mb-0.5">Sprint updates</div>
-                    <div className="text-[10px] text-neutral-400">Get notified about sprint progress</div>
+                    <div className="text-sm text-white mb-0.5">Sprint updates</div>
+                    <div className="text-xs text-neutral-400">Get notified about sprint progress</div>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <div className="flex items-center justify-between px-3 py-2">
                   <div>
-                    <div className="text-xs text-white mb-0.5">Weekly digest</div>
-                    <div className="text-[10px] text-neutral-400">Receive weekly summary of activity</div>
+                    <div className="text-sm text-white mb-0.5">Weekly digest</div>
+                    <div className="text-xs text-neutral-400">Receive weekly summary of activity</div>
                   </div>
                   <Switch />
                 </div>
@@ -282,15 +282,15 @@ export function SettingsPage() {
             {/* Danger Zone */}
             <div className="bg-neutral-900 border border-red-500/30 rounded-lg">
               <div className="px-3 py-2 border-b border-red-500/30">
-                <h3 className="text-xs font-medium text-red-400">Danger Zone</h3>
+                <h3 className="text-sm font-medium text-red-400">Danger Zone</h3>
               </div>
               <div className="p-3">
                 <div className="flex items-center justify-between p-2 border border-red-500/30 rounded-md">
                   <div>
-                    <div className="text-xs font-medium text-white mb-0.5">Delete account</div>
-                    <div className="text-[10px] text-neutral-400">Permanently delete your account and all data</div>
+                    <div className="text-sm font-medium text-white mb-0.5">Delete account</div>
+                    <div className="text-xs text-neutral-400">Permanently delete your account and all data</div>
                   </div>
-                  <Button variant="destructive" size="sm" className="h-6 text-[10px] px-2">
+                  <Button variant="destructive" size="sm" className="h-7 text-xs px-3">
                     Delete
                   </Button>
                 </div>
