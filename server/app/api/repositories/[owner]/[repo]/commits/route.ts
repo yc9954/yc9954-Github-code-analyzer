@@ -8,7 +8,7 @@ export async function GET(
     const { owner, repo } = await params;
     const searchParams = request.nextUrl.searchParams;
     const branch = searchParams.get('branch') || 'main';
-    const perPage = parseInt(searchParams.get('per_page') || '30');
+    const perPage = Math.min(parseInt(searchParams.get('per_page') || '20'), 20); // 최대 20개로 제한
     const page = parseInt(searchParams.get('page') || '1');
 
     if (!owner || !repo) {
@@ -24,24 +24,41 @@ export async function GET(
     githubUrl.searchParams.set('per_page', perPage.toString());
     githubUrl.searchParams.set('page', page.toString());
 
-    const response = await fetch(githubUrl.toString(), {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        // 실제 사용 시에는 GitHub Personal Access Token을 환경 변수로 설정
-        // 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-      },
-    });
+    const githubToken = process.env.GITHUB_TOKEN;
+    const headers: HeadersInit = {
+      'Accept': 'application/vnd.github.v3+json',
+    };
+    if (githubToken) {
+      headers['Authorization'] = `token ${githubToken}`;
+    }
+
+    console.log(`Fetching commits from GitHub: ${githubUrl.toString()}`);
+    const response = await fetch(githubUrl.toString(), { headers });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`GitHub API error (${response.status}):`, errorText);
+      
       if (response.status === 404 || response.status === 403) {
+        console.warn(`Repository or branch not found: ${owner}/${repo} branch: ${branch}`);
         return NextResponse.json({
           commits: [],
         });
       }
-      throw new Error(`GitHub API error: ${response.status}`);
+      throw new Error(`GitHub API error: ${response.status} - ${errorText}`);
     }
 
     const commits = await response.json();
+    
+    // GitHub API는 배열을 직접 반환
+    if (!Array.isArray(commits)) {
+      console.error('GitHub API returned non-array:', commits);
+      return NextResponse.json({
+        commits: [],
+      });
+    }
+
+    console.log(`Received ${commits.length} commits from GitHub API for ${owner}/${repo} on branch ${branch}`);
 
     // 커밋 정보를 필요한 형식으로 변환
     const formattedCommits = commits.map((commit: any) => {

@@ -152,6 +152,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
     const [files, setFiles] = useState<AttachedFile[]>([]);
     const [pastedContent, setPastedContent] = useState<AttachedFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
+    const [isComposing, setIsComposing] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -235,18 +236,52 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
     };
 
     const handleSend = () => {
-        if (!message.trim() && files.length === 0 && pastedContent.length === 0) return;
-        onSendMessage({ message, files, pastedContent, model: "", isThinkingEnabled: false });
+        // IME 조합 중이면 전송하지 않음
+        if (isComposing) {
+            return;
+        }
+        
+        // textarea의 현재 값을 직접 읽어서 사용 (한글 입력 시 IME 처리 문제 해결)
+        const currentMessage = textareaRef.current?.value || message;
+        if (!currentMessage.trim() && files.length === 0 && pastedContent.length === 0) return;
+        
+        // 실제 입력된 전체 메시지를 전달
+        onSendMessage({ 
+            message: currentMessage, 
+            files, 
+            pastedContent, 
+            model: "", 
+            isThinkingEnabled: false 
+        });
+        
         setMessage("");
         setFiles([]);
         setPastedContent([]);
-        if (textareaRef.current) textareaRef.current.style.height = 'auto';
+        if (textareaRef.current) {
+            textareaRef.current.value = '';
+            textareaRef.current.style.height = 'auto';
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
             e.preventDefault();
-            handleSend();
+            // IME 조합이 완료될 때까지 약간의 지연
+            setTimeout(() => {
+                handleSend();
+            }, 0);
+        }
+    };
+
+    const handleCompositionStart = () => {
+        setIsComposing(true);
+    };
+
+    const handleCompositionEnd = () => {
+        setIsComposing(false);
+        // IME 조합 완료 후 textarea의 최신 값을 state에 동기화
+        if (textareaRef.current) {
+            setMessage(textareaRef.current.value);
         }
     };
 
@@ -293,6 +328,8 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
                                 onChange={(e) => setMessage(e.target.value)}
                                 onPaste={handlePaste}
                                 onKeyDown={handleKeyDown}
+                                onCompositionStart={handleCompositionStart}
+                                onCompositionEnd={handleCompositionEnd}
                                 placeholder="How can I help you today?"
                                 className="w-full bg-transparent border-0 outline-none text-white text-[16px] placeholder:text-neutral-500 resize-none overflow-hidden py-0 leading-relaxed block font-normal antialiased"
                                 rows={1}

@@ -17,14 +17,16 @@ export async function GET(
     // GitHub API를 사용하여 브랜치 목록 가져오기
     const githubUrl = `https://api.github.com/repos/${owner}/${repo}/branches`;
     
+    const githubToken = process.env.GITHUB_TOKEN;
+    const headers: HeadersInit = {
+      'Accept': 'application/vnd.github.v3+json',
+    };
+    if (githubToken) {
+      headers['Authorization'] = `token ${githubToken}`;
+    }
+    
     const startTime = Date.now();
-    const response = await fetch(githubUrl, {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        // 실제 사용 시에는 GitHub Personal Access Token을 환경 변수로 설정
-        // 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-      },
-    });
+    const response = await fetch(githubUrl, { headers });
 
     if (!response.ok) {
       // 레포지토리가 없거나 접근 권한이 없는 경우 예시 데이터 반환

@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'repositories';
     const language = searchParams.get('language');
     const sort = searchParams.get('sort') || 'best-match';
+    const page = parseInt(searchParams.get('page') || '1');
+    const perPage = Math.min(parseInt(searchParams.get('per_page') || '20'), 20); // 최대 20개로 제한
 
     if (!query) {
       return NextResponse.json(
@@ -15,28 +17,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // GitHub API를 사용하여 레포지토리 검색
-    // 실제로는 인증 토큰이 필요할 수 있습니다
-    let githubQuery = query;
-    if (language) {
-      githubQuery += ` language:${language}`;
+    const githubToken = process.env.GITHUB_TOKEN;
+    const headers: HeadersInit = {
+      'Accept': 'application/vnd.github.v3+json',
+    };
+    if (githubToken) {
+      headers['Authorization'] = `token ${githubToken}`;
     }
 
     // GitHub API 호출
-    const githubUrl = new URL('https://api.github.com/search/repositories');
-    githubUrl.searchParams.set('q', githubQuery);
-    githubUrl.searchParams.set('sort', sort === 'best-match' ? '' : sort);
-    githubUrl.searchParams.set('order', 'desc');
-    githubUrl.searchParams.set('per_page', '30');
+    let githubUrl: URL;
+    let githubQuery = query;
+    
+    if (type === 'users') {
+      // 유저 검색
+      githubUrl = new URL('https://api.github.com/search/users');
+      githubUrl.searchParams.set('q', githubQuery);
+      githubUrl.searchParams.set('per_page', perPage.toString());
+      githubUrl.searchParams.set('page', page.toString());
+    } else {
+      // 레포지토리 검색
+      if (language) {
+        githubQuery += ` language:${language}`;
+      }
+      githubUrl = new URL('https://api.github.com/search/repositories');
+      githubUrl.searchParams.set('q', githubQuery);
+      githubUrl.searchParams.set('sort', sort === 'best-match' ? '' : sort);
+      githubUrl.searchParams.set('order', 'desc');
+      githubUrl.searchParams.set('per_page', perPage.toString());
+      githubUrl.searchParams.set('page', page.toString());
+    }
 
     const startTime = Date.now();
-    const response = await fetch(githubUrl.toString(), {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        // 실제 사용 시에는 GitHub Personal Access Token을 환경 변수로 설정
-        // 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-      },
-    });
+    const response = await fetch(githubUrl.toString(), { headers });
 
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status}`);
@@ -45,29 +58,52 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     const queryTime = Date.now() - startTime;
 
-    // 응답 형식 변환
-    const repositories = data.items.map((item: any) => ({
-      id: item.id.toString(),
-      owner: item.owner.login,
-      name: item.name,
-      fullName: item.full_name,
-      description: item.description || '',
-      language: item.language || '',
-      stars: item.stargazers_count,
-      forks: item.forks_count,
-      updated: new Date(item.updated_at).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }),
-      isArchived: item.archived,
-    }));
+    if (type === 'users') {
+      // 유저 검색 결과 변환
+      const users = data.items.map((item: any) => ({
+        id: item.id.toString(),
+        login: item.login,
+        avatar: item.avatar_url,
+        type: item.type,
+        url: item.html_url,
+      }));
 
-    return NextResponse.json({
-      repositories,
-      total: data.total_count,
-      queryTime,
-    });
+      return NextResponse.json({
+        users,
+        total: data.total_count,
+        queryTime,
+        page,
+        perPage,
+        totalPages: Math.ceil(data.total_count / perPage),
+      });
+    } else {
+      // 레포지토리 검색 결과 변환
+      const repositories = data.items.map((item: any) => ({
+        id: item.id.toString(),
+        owner: item.owner.login,
+        name: item.name,
+        fullName: item.full_name,
+        description: item.description || '',
+        language: item.language || '',
+        stars: item.stargazers_count,
+        forks: item.forks_count,
+        updated: new Date(item.updated_at).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        isArchived: item.archived,
+      }));
+
+      return NextResponse.json({
+        repositories,
+        total: data.total_count,
+        queryTime,
+        page,
+        perPage,
+        totalPages: Math.ceil(data.total_count / perPage),
+      });
+    }
   } catch (error: any) {
     console.error('Search error:', error);
     return NextResponse.json(
