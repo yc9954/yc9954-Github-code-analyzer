@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { Checkbox } from "@/app/components/ui/checkbox";
-import { Star, GitBranch, Calendar, BookOpen, Code, AlertCircle, GitPullRequest, MessageSquare, Users, ChevronDown } from "lucide-react";
+import { Star, GitBranch, Calendar, BookOpen, MessageSquare, Users, ChevronDown } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 
@@ -65,10 +65,7 @@ const mockRepositories = [
 ];
 
 const filterCounts = {
-  code: 51700,
   repositories: 302,
-  issues: 77,
-  pullRequests: 88,
   discussions: 3,
   users: 471,
 };
@@ -90,7 +87,7 @@ export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryFromUrl = searchParams.get("q") || "";
   const [searchQuery, setSearchQuery] = useState(queryFromUrl);
-  const [activeFilter, setActiveFilter] = useState<"code" | "repositories" | "issues" | "pullRequests" | "discussions" | "users">("repositories");
+  const [activeFilter, setActiveFilter] = useState<"repositories" | "discussions" | "users">("repositories");
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   // Update search query when URL changes
@@ -125,19 +122,6 @@ export function SearchPage() {
                   <h3 className="text-sm font-semibold text-white mb-3">Filter by</h3>
                   <div className="space-y-1">
                     <button
-                      onClick={() => setActiveFilter("code")}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
-                        activeFilter === "code"
-                          ? "bg-blue-500 text-white"
-                          : "text-white hover:bg-neutral-900"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-white">Code</span>
-                        <span className="text-xs text-neutral-400">{filterCounts.code.toLocaleString()}</span>
-                      </div>
-                    </button>
-                    <button
                       onClick={() => setActiveFilter("repositories")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "repositories"
@@ -148,32 +132,6 @@ export function SearchPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-white">Repositories</span>
                         <span className="text-xs text-neutral-400">{filterCounts.repositories}</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveFilter("issues")}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
-                        activeFilter === "issues"
-                          ? "bg-blue-500 text-white"
-                          : "text-white hover:bg-neutral-900"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-white">Issues</span>
-                        <span className="text-xs text-neutral-400">{filterCounts.issues}</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveFilter("pullRequests")}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
-                        activeFilter === "pullRequests"
-                          ? "bg-blue-500 text-white"
-                          : "text-white hover:bg-neutral-900"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-white">Pull requests</span>
-                        <span className="text-xs text-neutral-400">{filterCounts.pullRequests}</span>
                       </div>
                     </button>
                     <button
@@ -334,27 +292,6 @@ export function SearchPage() {
                     ))}
                   </div>
                 </>
-              )}
-
-              {queryFromUrl && activeFilter === "code" && (
-                <div className="text-center py-12">
-                  <Code className="w-12 h-12 text-white/40 mx-auto mb-4" />
-                  <p className="text-white/80">Code search results will appear here</p>
-                </div>
-              )}
-
-              {queryFromUrl && activeFilter === "issues" && (
-                <div className="text-center py-12">
-                  <AlertCircle className="w-12 h-12 text-white/40 mx-auto mb-4" />
-                  <p className="text-white/80">Issue search results will appear here</p>
-                </div>
-              )}
-
-              {queryFromUrl && activeFilter === "pullRequests" && (
-                <div className="text-center py-12">
-                  <GitPullRequest className="w-12 h-12 text-white/40 mx-auto mb-4" />
-                  <p className="text-white/80">Pull request search results will appear here</p>
-                </div>
               )}
 
               {queryFromUrl && activeFilter === "discussions" && (

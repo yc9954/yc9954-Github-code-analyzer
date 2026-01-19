@@ -30,29 +30,29 @@ export function RankingPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
+      <div className="h-[calc(100vh-4rem)] flex flex-col bg-black">
         {/* Compact Header */}
-        <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#0d1117]">
+        <div className="px-4 py-2.5 border-b border-neutral-900 bg-black">
           <div className="flex items-center justify-between">
             <h1 className="text-base font-semibold text-white">Rankings</h1>
             <div className="flex items-center gap-2">
               <Select value={viewType} onValueChange={(value) => setViewType(value as "individual" | "team")}>
-                <SelectTrigger className="w-32 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
+                <SelectTrigger className="w-32 bg-neutral-900 border-neutral-800 text-white h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#161b22] border-[#30363d]">
-                  <SelectItem value="individual" className="text-white focus:bg-[#0d1117] text-xs">Individual</SelectItem>
-                  <SelectItem value="team" className="text-white focus:bg-[#0d1117] text-xs">Team</SelectItem>
+                <SelectContent className="bg-neutral-900 border-neutral-800">
+                  <SelectItem value="individual" className="text-white focus:bg-neutral-800 text-xs">Individual</SelectItem>
+                  <SelectItem value="team" className="text-white focus:bg-neutral-800 text-xs">Team</SelectItem>
                 </SelectContent>
               </Select>
               <Select defaultValue="all">
-                <SelectTrigger className="w-32 bg-[#161b22] border-[#30363d] text-white h-7 text-xs">
+                <SelectTrigger className="w-32 bg-neutral-900 border-neutral-800 text-white h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#161b22] border-[#30363d]">
-                  <SelectItem value="all" className="text-white focus:bg-[#0d1117] text-xs">All Time</SelectItem>
-                  <SelectItem value="month" className="text-white focus:bg-[#0d1117] text-xs">This Month</SelectItem>
-                  <SelectItem value="week" className="text-white focus:bg-[#0d1117] text-xs">This Week</SelectItem>
+                <SelectContent className="bg-neutral-900 border-neutral-800">
+                  <SelectItem value="all" className="text-white focus:bg-neutral-800 text-xs">All Time</SelectItem>
+                  <SelectItem value="month" className="text-white focus:bg-neutral-800 text-xs">This Month</SelectItem>
+                  <SelectItem value="week" className="text-white focus:bg-neutral-800 text-xs">This Week</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -63,21 +63,21 @@ export function RankingPage() {
           <div className="max-w-5xl mx-auto">
             {/* Individual Ranking */}
             {viewType === "individual" && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10 bg-white/5 hover:bg-white/5">
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] w-12 h-7 py-1">Rank</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Developer</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Score</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
+                  <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                    <TableHead className="text-neutral-400 font-medium text-xs w-12 h-7 py-1">Rank</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Developer</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Score</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {individualRanking.map((person) => (
                     <TableRow 
                       key={person.rank} 
-                      className="border-white/10 bg-[#0d1117] hover:bg-white/10 cursor-pointer h-8"
+                      className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8"
                     >
                       <TableCell className="font-medium text-white py-1">
                         <div className="flex items-center gap-1.5">
@@ -87,20 +87,20 @@ export function RankingPage() {
                       </TableCell>
                       <TableCell className="py-1">
                         <div className="flex items-center gap-2">
-                          <Avatar className="w-5 h-5 border border-[#30363d]">
+                          <Avatar className="w-5 h-5 border border-neutral-800">
                             <AvatarImage src={defaultAvatar} />
-                            <AvatarFallback className="bg-[#21262d] text-white text-[10px]">
+                            <AvatarFallback className="bg-neutral-900 text-white text-xs">
                               {person.name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <div className="text-xs font-medium text-white">{person.name}</div>
-                            <div className="text-[10px] text-[#7d8590]">@{person.username}</div>
+                            <div className="text-[10px] text-neutral-400">@{person.username}</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-white text-right font-medium text-xs py-1">{person.score}</TableCell>
-                      <TableCell className="text-[#7d8590] text-right text-xs py-1">{person.commits}</TableCell>
+                      <TableCell className="text-neutral-400 text-right text-xs py-1">{person.commits}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -110,22 +110,22 @@ export function RankingPage() {
 
           {/* Team Ranking */}
           {viewType === "team" && (
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10 bg-white/5 hover:bg-white/5">
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] w-12 h-7 py-1">Rank</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] h-7 py-1">Team</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Score</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Commits</TableHead>
-                    <TableHead className="text-[#7d8590] font-medium text-[10px] text-right h-7 py-1">Members</TableHead>
+                  <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                    <TableHead className="text-neutral-400 font-medium text-xs w-12 h-7 py-1">Rank</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Team</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Score</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
+                    <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Members</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {teamRanking.map((team) => (
                     <TableRow 
                       key={team.rank} 
-                      className="border-white/10 bg-[#0d1117] hover:bg-white/10 cursor-pointer h-8"
+                      className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8"
                     >
                       <TableCell className="font-medium text-white py-1">
                         <div className="flex items-center gap-1.5">
@@ -135,8 +135,8 @@ export function RankingPage() {
                       </TableCell>
                       <TableCell className="font-medium text-white text-xs py-1">{team.name}</TableCell>
                       <TableCell className="text-white text-right font-medium text-xs py-1">{team.score}</TableCell>
-                      <TableCell className="text-[#7d8590] text-right text-xs py-1">{team.commits}</TableCell>
-                      <TableCell className="text-[#7d8590] text-right text-xs py-1">{team.members}</TableCell>
+                      <TableCell className="text-neutral-400 text-right text-xs py-1">{team.commits}</TableCell>
+                      <TableCell className="text-neutral-400 text-right text-xs py-1">{team.members}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
