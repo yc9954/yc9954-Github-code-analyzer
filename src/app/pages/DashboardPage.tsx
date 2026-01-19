@@ -37,42 +37,42 @@ const todayRanking = [
 export function DashboardPage() {
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col bg-[#0d1117]">
+      <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col bg-black">
         {/* Compact Header */}
-        <div className="px-4 py-2.5 border-b border-[#30363d] bg-[#0d1117]">
+        <div className="px-4 py-2.5 border-b border-neutral-800 bg-black">
           <h1 className="text-base font-semibold text-white">Home</h1>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 bg-black">
           <div className="max-w-[1400px] mx-auto">
             <div className="flex gap-4">
               {/* Left Sidebar - Top Repositories */}
-              <div className="w-64 flex-shrink-0 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col max-h-[400px]">
-                <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+              <div className="w-64 flex-shrink-0 bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col max-h-[400px]">
+                <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
                   <h2 className="text-sm font-semibold text-white">Top repositories</h2>
                 </div>
-                <div className="p-2 border-b border-white/10 bg-[#0d1117]">
+                <div className="p-2 border-b border-neutral-800 bg-black">
                   <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input
                       type="text"
                       placeholder="Find..."
-                      className="w-full pl-8 pr-2 py-2 bg-white/5 border border-white/10 rounded text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#7aa2f7] focus:bg-white/10"
+                      className="w-full pl-8 pr-2 py-2 bg-neutral-900 border border-neutral-800 rounded text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-blue-500 focus:bg-neutral-900"
                     />
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto bg-[#0d1117]">
+                <div className="flex-1 overflow-y-auto bg-black">
                   <div>
                     {myRepositories.slice(0, 3).map((repo) => (
                       <Link
                         key={repo.name}
                         to={`/repository`}
-                        className="block w-full px-3 py-2 text-sm text-white/90 hover:bg-white/10 transition-colors duration-150"
+                        className="block w-full px-3 py-2 text-sm text-white hover:bg-neutral-900 transition-colors duration-150"
                       >
                         <div className="font-medium truncate">{repo.name}</div>
                       </Link>
                     ))}
-                    <button className="w-full text-left px-3 py-2 text-sm text-[#7aa2f7] hover:text-[#7dcfff] hover:bg-white/10 transition-colors duration-150">
+                    <button className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:text-blue-300 hover:bg-neutral-900 transition-colors duration-150">
                       More
                     </button>
                   </div>
@@ -82,33 +82,33 @@ export function DashboardPage() {
               {/* Main Content */}
               <div className="flex-1 flex flex-col gap-4 min-w-0">
                 {/* Feed Section */}
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden flex flex-col max-h-[600px]">
-                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-white/5">
+                <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden flex flex-col max-h-[600px]">
+                  <div className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between bg-neutral-900">
                     <h3 className="text-sm font-semibold text-white">Feed</h3>
-                    <button className="text-sm text-white/70 hover:text-white hover:opacity-80">Filter</button>
+                    <button className="text-sm text-neutral-300 hover:text-white">Filter</button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0d1117]">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-black">
                     {/* Trending Repositories */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-medium text-white">Trending repositories</h4>
-                        <button className="text-sm text-[#7aa2f7] hover:text-[#7dcfff]">See more</button>
+                        <button className="text-sm text-blue-400 hover:text-blue-300">See more</button>
                       </div>
                       <div className="space-y-2">
                         {trendingRepos.map((repo, idx) => (
-                          <div key={idx} className="p-3 border border-white/10 rounded hover:bg-white/10 transition-colors">
+                          <div key={idx} className="p-3 border border-neutral-800 rounded hover:bg-neutral-900 transition-colors">
                             <div className="flex items-start justify-between mb-1">
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-medium text-white truncate">{repo.owner}/{repo.name}</div>
-                                <div className="text-sm text-white/60 mt-1 line-clamp-1">{repo.description}</div>
+                                <div className="text-sm text-neutral-400 mt-1 line-clamp-1">{repo.description}</div>
                               </div>
-                              <button className="ml-3 flex items-center gap-1.5 px-2 py-1 border border-white/10 rounded text-sm text-white/80 hover:bg-white/10 flex-shrink-0">
+                              <button className="ml-3 flex items-center gap-1.5 px-2 py-1 border border-neutral-800 rounded text-sm text-white hover:bg-neutral-900 flex-shrink-0">
                                 <Star className="w-4 h-4" />
-                                {repo.stars}
+                                <span className="text-blue-400">{repo.stars}</span>
                               </button>
                             </div>
                             <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-sm text-white/60">{repo.language}</span>
+                              <span className="text-sm text-blue-400">{repo.language}</span>
                             </div>
                           </div>
                         ))}
@@ -120,12 +120,12 @@ export function DashboardPage() {
                       <h4 className="text-sm font-medium text-white mb-2">Recommended for you</h4>
                       <div className="space-y-2">
                         {recentActivity.map((activity, idx) => (
-                          <div key={idx} className="p-3 border border-white/10 rounded hover:bg-white/10 transition-colors">
+                          <div key={idx} className="p-3 border border-neutral-800 rounded hover:bg-neutral-900 transition-colors">
                             <div className="flex items-center gap-2">
-                              <GitCommit className="w-4 h-4 text-white/60 flex-shrink-0" />
+                              <GitCommit className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm text-white truncate">{activity.message}</div>
-                                <div className="text-sm text-white/60 mt-1">
+                                <div className="text-sm text-neutral-400 mt-1">
                                   {activity.repo} · {activity.time}
                                 </div>
                               </div>
@@ -141,17 +141,17 @@ export function DashboardPage() {
               {/* Right Sidebar - Latest Activity + Today's Ranking */}
               <div className="w-64 flex-shrink-0 flex flex-col gap-4">
                 {/* Latest Activity */}
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col max-h-[250px]">
-                  <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+                <div className="bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col max-h-[250px]">
+                  <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
                     <h2 className="text-sm font-semibold text-white">Latest activity</h2>
                   </div>
-                  <div className="flex-1 overflow-y-auto bg-[#0d1117]">
+                  <div className="flex-1 overflow-y-auto bg-black">
                     <div>
                       {recentActivity.map((activity, idx) => (
-                        <div key={idx} className="w-full px-3 py-2 bg-[#0d1117] hover:bg-white/10 transition-colors duration-150 cursor-pointer">
-                          <div className="text-sm text-white/60 mb-1">{activity.time}</div>
+                        <div key={idx} className="w-full px-3 py-2 bg-black hover:bg-neutral-900 transition-colors duration-150 cursor-pointer">
+                          <div className="text-sm text-neutral-400 mb-1">{activity.time}</div>
                           <div className="text-sm text-white truncate">{activity.message}</div>
-                          <div className="text-sm text-white/60 mt-1 truncate">{activity.repo}</div>
+                          <div className="text-sm text-neutral-400 mt-1 truncate">{activity.repo}</div>
                         </div>
                       ))}
                     </div>
@@ -159,18 +159,18 @@ export function DashboardPage() {
                 </div>
 
                 {/* Today's Ranking */}
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex flex-col">
-                  <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+                <div className="bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col">
+                  <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
                     <div className="flex items-center gap-1.5">
                       <Trophy className="w-4 h-4 text-[#f0883e]" />
                       <h2 className="text-sm font-semibold text-white">Today's Ranking</h2>
                     </div>
                   </div>
-                  <div className="bg-[#0d1117]">
+                  <div className="bg-black">
                     {todayRanking.slice(0, 3).map((person) => (
                       <div
                         key={person.rank}
-                        className="flex items-center gap-2 w-full px-3 py-2 bg-[#0d1117] hover:bg-white/10 transition-colors duration-150 cursor-pointer"
+                        className="flex items-center gap-2 w-full px-3 py-2 bg-black hover:bg-neutral-900 transition-colors duration-150 cursor-pointer"
                       >
                         <div className="flex items-center gap-1">
                           {person.rank <= 3 && (
@@ -182,17 +182,17 @@ export function DashboardPage() {
                           )}
                           <span className="text-sm font-medium text-white">#{person.rank}</span>
                         </div>
-                        <Avatar className="w-6 h-6 border border-white/20">
+                        <Avatar className="w-6 h-6 border border-neutral-800">
                           <AvatarImage src={defaultAvatar} />
-                          <AvatarFallback className="bg-white/10 text-white/80 text-xs">
+                          <AvatarFallback className="bg-neutral-900 text-neutral-300 text-xs">
                             {person.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-white truncate">{person.name}</div>
-                          <div className="text-xs text-white/60">{person.commits} commits</div>
+                          <div className="text-xs text-neutral-400">{person.commits} commits</div>
                         </div>
-                        <div className="text-sm font-semibold text-[#7aa2f7]">{person.score}</div>
+                        <div className="text-sm font-semibold text-blue-400">{person.score}</div>
                       </div>
                     ))}
                   </div>
