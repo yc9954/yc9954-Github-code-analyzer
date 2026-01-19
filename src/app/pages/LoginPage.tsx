@@ -9,14 +9,14 @@ export function LoginPage() {
     const formData = new FormData(event.currentTarget);
     const data = Object.fromEntries(formData.entries());
     console.log("Sign In submitted:", data);
-    // Navigate to dashboard on successful sign in
-    navigate("/dashboard");
+    // Navigate to repository analysis on successful sign in
+    navigate("/repository");
   };
 
   const handleGitHubSignIn = () => {
     console.log("Continue with GitHub clicked");
-    // Navigate to dashboard
-    navigate("/dashboard");
+    // Navigate to repository analysis
+    navigate("/repository");
   };
   
   const handleResetPassword = () => {

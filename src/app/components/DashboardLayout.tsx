@@ -10,7 +10,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="relative h-screen bg-[#0d1117]">
+    <div className="relative h-screen bg-black">
       {/* Background overlay when sidebar is open */}
       {isSidebarOpen && (
         <div 

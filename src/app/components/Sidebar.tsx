@@ -13,8 +13,8 @@ import {
 import { Button } from "@/app/components/ui/button";
 
 const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/repository", label: "Repository", icon: GitBranch },
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/search", label: "Search", icon: Search },
   { path: "/sprint", label: "Sprint", icon: Zap },
   { path: "/settings", label: "Settings", icon: Settings },
