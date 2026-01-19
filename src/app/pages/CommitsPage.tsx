@@ -236,7 +236,7 @@ export function CommitsPage() {
           {/* Left Panel - Commit List */}
           <div className="w-[360px] border-r border-white/10 bg-[#0d1117] flex flex-col flex-shrink-0">
             {/* Commit List Header - Compact */}
-            <div className="px-3 py-2 border-b border-[#30363d] bg-white/5 flex items-center justify-between">
+            <div className="px-3 border-b border-white/10 bg-white/5 flex items-center justify-between h-10">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-white">Commits</span>
                 <span className="text-xs text-[#7d8590]">Jan 14</span>
@@ -372,16 +372,14 @@ export function CommitsPage() {
             {/* AI Chat Section */}
             <div className="flex-1 flex flex-col">
                 {/* Chat Header - Compact */}
-                <div className="px-3 py-2 border-b border-white/10 bg-white/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-white">AI Assistant</span>
-                      {selectedCommit && (
-                        <code className="text-[10px] text-[#7aa2f7] font-mono bg-[#0d1117] px-1.5 py-0.5 rounded border border-white/10">
-                          {selectedCommit.substring(0, 7)}
-                        </code>
-                      )}
-                    </div>
+                <div className="px-3 border-b border-white/10 bg-white/5 flex items-center justify-between h-10">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-white">AI Assistant</span>
+                    {selectedCommit && (
+                      <code className="text-[10px] text-[#7aa2f7] font-mono bg-[#0d1117] px-1.5 py-0.5 rounded border border-white/10">
+                        {selectedCommit.substring(0, 7)}
+                      </code>
+                    )}
                   </div>
                 </div>
 
