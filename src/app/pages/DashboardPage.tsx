@@ -1,40 +1,41 @@
 import { DashboardLayout } from "@/app/components/DashboardLayout";
-import { GitCommit, Star, Search, Trophy } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
-import defaultAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
+import RotatingEarth from "@/app/components/ui/wireframe-dotted-globe";
+import { useState, useEffect } from "react";
 
-// Mock data
-const myRepositories = [
-  { name: "web-dashboard", owner: "johndoe", commits: 156, language: "TypeScript", stars: 12, lastUpdate: "2 hours ago" },
-  { name: "api-server", owner: "johndoe", commits: 89, language: "Python", stars: 8, lastUpdate: "5 hours ago" },
-  { name: "mobile-app", owner: "johndoe", commits: 234, language: "JavaScript", stars: 23, lastUpdate: "1 day ago" },
-  { name: "data-pipeline", owner: "johndoe", commits: 67, language: "Go", stars: 5, lastUpdate: "2 days ago" },
-  { name: "auth-service", owner: "johndoe", commits: 45, language: "TypeScript", stars: 3, lastUpdate: "3 days ago" },
-  { name: "ui-components", owner: "johndoe", commits: 123, language: "TypeScript", stars: 15, lastUpdate: "4 days ago" },
+// Mock data for sprints and issues locations (latitude, longitude)
+// 실제로는 API에서 가져와야 할 데이터
+const sprintLocations = [
+  { lat: 37.5665, lng: 126.9780, color: "#7aa2f7", size: 8 }, // Seoul
+  { lat: 40.7128, lng: -74.0060, color: "#7aa2f7", size: 8 }, // New York
+  { lat: 51.5074, lng: -0.1278, color: "#7aa2f7", size: 8 }, // London
+  { lat: 35.6762, lng: 139.6503, color: "#7aa2f7", size: 8 }, // Tokyo
 ];
 
-const trendingRepos = [
-  { name: "agent-skills", owner: "vercel-labs", language: "JavaScript", stars: "7.9k", description: "AI agent skills framework" },
-  { name: "huobao-drama", owner: "chatfire-AI", language: "Vue", stars: "1.6k", description: "AI-Powered End-to-End Short Drama Generator" },
-  { name: "DeepCompletionRelease", owner: "yindaz", language: "C", stars: "590", description: "Deep Depth Completion of a Single RGB-D Image" },
-];
-
-const recentActivity = [
-  { type: "commit", repo: "web-dashboard", message: "Fix authentication bug", time: "15m ago" },
-  { type: "pr", repo: "api-server", message: "Add new dashboard features", time: "1h ago" },
-  { type: "commit", repo: "mobile-app", message: "Update dependencies", time: "2h ago" },
-];
-
-const todayRanking = [
-  { rank: 1, name: "Alice Johnson", username: "alicej", commits: 12, score: 95 },
-  { rank: 2, name: "Bob Smith", username: "bobsmith", commits: 9, score: 88 },
-  { rank: 3, name: "Carol White", username: "carolw", commits: 8, score: 85 },
-  { rank: 4, name: "David Brown", username: "davidb", commits: 7, score: 82 },
-  { rank: 5, name: "Emma Davis", username: "emmad", commits: 6, score: 79 },
+const issueLocations = [
+  { lat: 37.7749, lng: -122.4194, color: "#f0883e", size: 6 }, // San Francisco
+  { lat: 52.5200, lng: 13.4050, color: "#f0883e", size: 6 }, // Berlin
+  { lat: -33.8688, lng: 151.2093, color: "#f0883e", size: 6 }, // Sydney
 ];
 
 export function DashboardPage() {
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      setDimensions({
+        width: window.innerWidth - 100,
+        height: window.innerHeight - 200,
+      });
+    };
+
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
+  }, []);
+
+  // Combine sprints and issues for the globe
+  const allDots = [...sprintLocations, ...issueLocations];
+
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col bg-black">
@@ -43,162 +44,14 @@ export function DashboardPage() {
           <h1 className="text-base font-semibold text-white">Home</h1>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 bg-black">
-          <div className="max-w-[1400px] mx-auto">
-            <div className="flex gap-4">
-              {/* Left Sidebar - Top Repositories */}
-              <div className="w-64 flex-shrink-0 bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col max-h-[400px]">
-                <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                  <h2 className="text-sm font-semibold text-white">Top repositories</h2>
-                </div>
-                <div className="p-2 border-b border-neutral-800 bg-black">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                      type="text"
-                      placeholder="Find..."
-                      className="w-full pl-8 pr-2 py-2 bg-neutral-900 border border-neutral-800 rounded text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-blue-500 focus:bg-neutral-900"
-                    />
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto bg-black">
-                  <div>
-                    {myRepositories.slice(0, 3).map((repo) => (
-                      <Link
-                        key={repo.name}
-                        to={`/repository`}
-                        className="block w-full px-3 py-2 text-sm text-white hover:bg-neutral-900 transition-colors duration-150"
-                      >
-                        <div className="font-medium truncate">{repo.name}</div>
-                      </Link>
-                    ))}
-                    <button className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:text-blue-300 hover:bg-neutral-900 transition-colors duration-150">
-                      More
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Content */}
-              <div className="flex-1 flex flex-col gap-4 min-w-0">
-                {/* Feed Section */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden flex flex-col max-h-[600px]">
-                  <div className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between bg-neutral-900">
-                    <h3 className="text-sm font-semibold text-white">Feed</h3>
-                    <button className="text-sm text-neutral-300 hover:text-white">Filter</button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-black">
-                    {/* Trending Repositories */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium text-white">Trending repositories</h4>
-                        <button className="text-sm text-blue-400 hover:text-blue-300">See more</button>
-                      </div>
-                      <div className="space-y-2">
-                        {trendingRepos.map((repo, idx) => (
-                          <div key={idx} className="p-3 border border-neutral-800 rounded hover:bg-neutral-900 transition-colors">
-                            <div className="flex items-start justify-between mb-1">
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-white truncate">{repo.owner}/{repo.name}</div>
-                                <div className="text-sm text-neutral-400 mt-1 line-clamp-1">{repo.description}</div>
-                              </div>
-                              <button className="ml-3 flex items-center gap-1.5 px-2 py-1 border border-neutral-800 rounded text-sm text-white hover:bg-neutral-900 flex-shrink-0">
-                                <Star className="w-4 h-4" />
-                                <span className="text-blue-400">{repo.stars}</span>
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-sm text-blue-400">{repo.language}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Recommended */}
-                    <div>
-                      <h4 className="text-sm font-medium text-white mb-2">Recommended for you</h4>
-                      <div className="space-y-2">
-                        {recentActivity.map((activity, idx) => (
-                          <div key={idx} className="p-3 border border-neutral-800 rounded hover:bg-neutral-900 transition-colors">
-                            <div className="flex items-center gap-2">
-                              <GitCommit className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm text-white truncate">{activity.message}</div>
-                                <div className="text-sm text-neutral-400 mt-1">
-                                  {activity.repo} · {activity.time}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Sidebar - Latest Activity + Today's Ranking */}
-              <div className="w-64 flex-shrink-0 flex flex-col gap-4">
-                {/* Latest Activity */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col max-h-[250px]">
-                  <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                    <h2 className="text-sm font-semibold text-white">Latest activity</h2>
-                  </div>
-                  <div className="flex-1 overflow-y-auto bg-black">
-                    <div>
-                      {recentActivity.map((activity, idx) => (
-                        <div key={idx} className="w-full px-3 py-2 bg-black hover:bg-neutral-900 transition-colors duration-150 cursor-pointer">
-                          <div className="text-sm text-neutral-400 mb-1">{activity.time}</div>
-                          <div className="text-sm text-white truncate">{activity.message}</div>
-                          <div className="text-sm text-neutral-400 mt-1 truncate">{activity.repo}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Today's Ranking */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col">
-                  <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                    <div className="flex items-center gap-1.5">
-                      <Trophy className="w-4 h-4 text-[#f0883e]" />
-                      <h2 className="text-sm font-semibold text-white">Today's Ranking</h2>
-                    </div>
-                  </div>
-                  <div className="bg-black">
-                    {todayRanking.slice(0, 3).map((person) => (
-                      <div
-                        key={person.rank}
-                        className="flex items-center gap-2 w-full px-3 py-2 bg-black hover:bg-neutral-900 transition-colors duration-150 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-1">
-                          {person.rank <= 3 && (
-                            <Trophy className={`w-4 h-4 ${
-                              person.rank === 1 ? 'text-[#f0883e]' : 
-                              person.rank === 2 ? 'text-gray-400' : 
-                              'text-[#cd7f32]'
-                            }`} />
-                          )}
-                          <span className="text-sm font-medium text-white">#{person.rank}</span>
-                        </div>
-                        <Avatar className="w-6 h-6 border border-neutral-800">
-                          <AvatarImage src={defaultAvatar} />
-                          <AvatarFallback className="bg-neutral-900 text-neutral-300 text-xs">
-                            {person.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white truncate">{person.name}</div>
-                          <div className="text-xs text-neutral-400">{person.commits} commits</div>
-                        </div>
-                        <div className="text-sm font-semibold text-blue-400">{person.score}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="flex-1 overflow-hidden bg-black">
+          <div className="w-full h-full flex items-center justify-center p-4">
+            <RotatingEarth 
+              width={dimensions.width} 
+              height={dimensions.height}
+              customDots={allDots}
+              className="w-full h-full"
+            />
           </div>
         </div>
       </div>
