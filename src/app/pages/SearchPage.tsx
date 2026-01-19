@@ -22,6 +22,60 @@ const languages = [
   "C#",
 ];
 
+// 언어별 색상 매핑 (GitHub 언어 색상 기준)
+const getLanguageColor = (language: string | null | undefined): string => {
+  if (!language) return "bg-gray-500";
+  
+  const colorMap: Record<string, string> = {
+    "JavaScript": "bg-yellow-400",
+    "TypeScript": "bg-blue-500",
+    "Python": "bg-blue-400",
+    "Java": "bg-orange-500",
+    "C": "bg-gray-500",
+    "C++": "bg-pink-500",
+    "C#": "bg-purple-500",
+    "HTML": "bg-orange-400",
+    "CSS": "bg-blue-600",
+    "PHP": "bg-indigo-500",
+    "Ruby": "bg-red-500",
+    "Go": "bg-cyan-500",
+    "Rust": "bg-orange-600",
+    "Swift": "bg-orange-400",
+    "Kotlin": "bg-purple-600",
+    "Dart": "bg-blue-500",
+    "Scala": "bg-red-600",
+    "Shell": "bg-gray-400",
+    "PowerShell": "bg-blue-700",
+    "Vue": "bg-green-500",
+    "React": "bg-cyan-400",
+    "Angular": "bg-red-600",
+    "Svelte": "bg-orange-500",
+    "Dockerfile": "bg-blue-500",
+    "YAML": "bg-gray-400",
+    "JSON": "bg-yellow-500",
+    "Markdown": "bg-gray-500",
+    "SQL": "bg-blue-600",
+    "R": "bg-blue-400",
+    "MATLAB": "bg-yellow-500",
+    "Perl": "bg-blue-500",
+    "Lua": "bg-blue-400",
+    "Haskell": "bg-purple-500",
+    "Clojure": "bg-green-500",
+    "Erlang": "bg-red-500",
+    "Elixir": "bg-purple-500",
+    "OCaml": "bg-orange-500",
+    "F#": "bg-blue-500",
+    "Objective-C": "bg-blue-600",
+    "Assembly": "bg-gray-600",
+    "Vim script": "bg-green-600",
+    "TeX": "bg-gray-500",
+    "Makefile": "bg-yellow-600",
+    "CMake": "bg-gray-500",
+  };
+
+  return colorMap[language] || "bg-gray-500";
+};
+
 export function SearchPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -306,10 +360,10 @@ export function SearchPage() {
             </aside>
 
             {/* Main Content - Search Results */}
-            <main className="flex-1 min-w-0 flex flex-col">
+            <main className="flex-1 min-w-0 flex flex-col pr-12">
               {activeFilter === "repositories" && (
                 <>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-4 max-w-6xl">
                     <div className="text-xs text-neutral-400">
                       {loading ? (
                         <div className="flex items-center gap-2">
@@ -343,7 +397,7 @@ export function SearchPage() {
                       <p className="text-white/80 text-xs">No repositories found</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3 max-w-6xl">
                       {repositories.map((repo) => (
                         <div
                           key={repo.id || `${repo.owner}/${repo.name}`}
@@ -368,7 +422,7 @@ export function SearchPage() {
                               <div className="flex items-center gap-4 text-xs text-neutral-400">
                                 {repo.language && (
                                   <div className="flex items-center gap-1.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                                    <div className={`w-2.5 h-2.5 rounded-full ${getLanguageColor(repo.language)}`}></div>
                                     <span className="text-neutral-300">{repo.language}</span>
                                   </div>
                                 )}
@@ -402,7 +456,7 @@ export function SearchPage() {
 
                   {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 mt-6 pb-4">
+                    <div className="flex items-center justify-center gap-2 mt-6 pb-4 max-w-6xl">
                       <Button
                         variant="outline"
                         size="sm"
@@ -465,7 +519,7 @@ export function SearchPage() {
 
               {activeFilter === "users" && (
                 <>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-4 max-w-6xl">
                     <div className="text-xs text-neutral-400">
                       {loading ? (
                         <div className="flex items-center gap-2">
@@ -487,7 +541,7 @@ export function SearchPage() {
                       <p className="text-white/80 text-xs">No users found</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3 max-w-6xl">
                       {users.map((user) => (
                         <div
                           key={user.id}
@@ -514,7 +568,7 @@ export function SearchPage() {
 
                   {/* Pagination for Users */}
                   {totalPages > 1 && activeFilter === "users" && (
-                    <div className="flex items-center justify-center gap-2 mt-6 pb-4">
+                    <div className="flex items-center justify-center gap-2 mt-6 pb-4 max-w-6xl">
                       <Button
                         variant="outline"
                         size="sm"
