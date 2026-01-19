@@ -109,16 +109,16 @@ export function SearchPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117]">
+      <div className="h-[calc(100vh-4rem)] flex flex-col bg-black">
         {/* Compact Header */}
-        <div className="px-4 py-2.5 border-b border-white/10 bg-[#0d1117]">
+        <div className="px-4 py-2.5 border-b border-neutral-900 bg-black">
           <h1 className="text-base font-semibold text-white">Search</h1>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-black">
           <div className="w-full px-4 py-4 h-full">
             <div className="flex gap-6 h-full">
               {/* Left Sidebar - Filters */}
-              <aside className="w-64 flex-shrink-0">
+              <aside className="w-48 flex-shrink-0">
                 <div className="sticky top-4 space-y-6">
                 <div>
                   <h3 className="text-sm font-semibold text-white mb-3">Filter by</h3>
@@ -127,85 +127,85 @@ export function SearchPage() {
                       onClick={() => setActiveFilter("code")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "code"
-                          ? "bg-[#7aa2f7] text-white"
-                          : "text-white/90 hover:bg-white/10"
+                          ? "bg-blue-500 text-white"
+                          : "text-white hover:bg-neutral-900"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Code</span>
-                        <span className="text-xs text-white/60">{filterCounts.code.toLocaleString()}</span>
+                        <span className="text-white">Code</span>
+                        <span className="text-xs text-neutral-400">{filterCounts.code.toLocaleString()}</span>
                       </div>
                     </button>
                     <button
                       onClick={() => setActiveFilter("repositories")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "repositories"
-                          ? "bg-[#7aa2f7] text-white"
-                          : "text-white/90 hover:bg-white/10"
+                          ? "bg-blue-500 text-white"
+                          : "text-white hover:bg-neutral-900"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Repositories</span>
-                        <span className="text-xs text-white/60">{filterCounts.repositories}</span>
+                        <span className="text-white">Repositories</span>
+                        <span className="text-xs text-neutral-400">{filterCounts.repositories}</span>
                       </div>
                     </button>
                     <button
                       onClick={() => setActiveFilter("issues")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "issues"
-                          ? "bg-[#7aa2f7] text-white"
-                          : "text-white/90 hover:bg-white/10"
+                          ? "bg-blue-500 text-white"
+                          : "text-white hover:bg-neutral-900"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Issues</span>
-                        <span className="text-xs text-white/60">{filterCounts.issues}</span>
+                        <span className="text-white">Issues</span>
+                        <span className="text-xs text-neutral-400">{filterCounts.issues}</span>
                       </div>
                     </button>
                     <button
                       onClick={() => setActiveFilter("pullRequests")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "pullRequests"
-                          ? "bg-[#7aa2f7] text-white"
-                          : "text-white/90 hover:bg-white/10"
+                          ? "bg-blue-500 text-white"
+                          : "text-white hover:bg-neutral-900"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Pull requests</span>
-                        <span className="text-xs text-white/60">{filterCounts.pullRequests}</span>
+                        <span className="text-white">Pull requests</span>
+                        <span className="text-xs text-neutral-400">{filterCounts.pullRequests}</span>
                       </div>
                     </button>
                     <button
                       onClick={() => setActiveFilter("discussions")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "discussions"
-                          ? "bg-[#7aa2f7] text-white"
-                          : "text-white/90 hover:bg-white/10"
+                          ? "bg-blue-500 text-white"
+                          : "text-white hover:bg-neutral-900"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Discussions</span>
-                        <span className="text-xs text-white/60">{filterCounts.discussions}</span>
+                        <span className="text-white">Discussions</span>
+                        <span className="text-xs text-neutral-400">{filterCounts.discussions}</span>
                       </div>
                     </button>
                     <button
                       onClick={() => setActiveFilter("users")}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "users"
-                          ? "bg-[#7aa2f7] text-white"
-                          : "text-white/90 hover:bg-white/10"
+                          ? "bg-blue-500 text-white"
+                          : "text-white hover:bg-neutral-900"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Users</span>
-                        <span className="text-xs text-white/60">{filterCounts.users}</span>
+                        <span className="text-white">Users</span>
+                        <span className="text-xs text-neutral-400">{filterCounts.users}</span>
                       </div>
                     </button>
                   </div>
                 </div>
 
                 {activeFilter === "repositories" && (
-                  <div className="pt-4 border-t border-white/10">
+                  <div className="pt-4 border-t border-neutral-900">
                     <h3 className="text-sm font-semibold text-white mb-3">Languages</h3>
                     <div className="space-y-1">
                       {languages.map((lang) => (
@@ -214,31 +214,31 @@ export function SearchPage() {
                           onClick={() => setSelectedLanguage(selectedLanguage === lang ? null : lang)}
                           className={`w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 ${
                             selectedLanguage === lang
-                              ? "bg-[#7aa2f7]/20 text-[#7aa2f7]"
-                              : "text-white/90 hover:bg-white/10"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : "text-white hover:bg-neutral-900"
                           }`}
                         >
-                          <div className="w-3 h-3 rounded-full bg-[#7aa2f7]"></div>
-                          <span>{lang}</span>
+                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                          <span className="text-white">{lang}</span>
                         </button>
                       ))}
-                      <button className="w-full text-left px-3 py-1.5 text-sm text-[#7aa2f7] hover:bg-white/10 rounded-md">
+                      <button className="w-full text-left px-3 py-1.5 text-sm text-blue-400 hover:bg-neutral-900 rounded-md">
                         More languages...
                       </button>
                     </div>
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-neutral-900">
                   <h3 className="text-sm font-semibold text-white mb-3">Advanced</h3>
                   <div className="space-y-2">
-                    <button className="w-full text-left px-3 py-1.5 text-sm text-white/90 hover:bg-white/10 rounded-md flex items-center justify-between">
-                      <span>Owner</span>
-                      <ChevronDown className="w-4 h-4" />
+                    <button className="w-full text-left px-3 py-1.5 text-sm text-white hover:bg-neutral-900 rounded-md flex items-center justify-between">
+                      <span className="text-white">Owner</span>
+                      <ChevronDown className="w-4 h-4 text-white" />
                     </button>
-                    <button className="w-full text-left px-3 py-1.5 text-sm text-white/90 hover:bg-white/10 rounded-md flex items-center justify-between">
-                      <span>Size</span>
-                      <ChevronDown className="w-4 h-4" />
+                    <button className="w-full text-left px-3 py-1.5 text-sm text-white hover:bg-neutral-900 rounded-md flex items-center justify-between">
+                      <span className="text-white">Size</span>
+                      <ChevronDown className="w-4 h-4 text-white" />
                     </button>
                   </div>
                 </div>
@@ -247,34 +247,24 @@ export function SearchPage() {
 
             {/* Main Content - Search Results */}
             <main className="flex-1 min-w-0 flex flex-col">
-              {!queryFromUrl && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <Code className="w-12 h-12 text-white/40 mx-auto mb-4" />
-                    <p className="text-white/80 mb-2">Enter a search term</p>
-                    <p className="text-sm text-white/60">Enter a search term in the search bar above and click the search button</p>
-                  </div>
-                </div>
-              )}
-              
-              {queryFromUrl && activeFilter === "repositories" && (
+              {activeFilter === "repositories" && (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm text-white/60">
+                    <div className="text-sm text-neutral-400">
                       {mockRepositories.length} results (148 ms)
                     </div>
                     <div className="flex items-center gap-2">
                       <Select defaultValue="best-match">
-                        <SelectTrigger className="w-40 h-8 bg-white/5 border-white/10 text-white text-sm">
+                        <SelectTrigger className="w-40 h-8 bg-neutral-900 border-neutral-800 text-white text-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white/5 backdrop-blur-md border-white/10">
+                        <SelectContent className="bg-neutral-900 border-neutral-800">
                           <SelectItem value="best-match" className="text-white">Best match</SelectItem>
                           <SelectItem value="stars" className="text-white">Most stars</SelectItem>
                           <SelectItem value="updated" className="text-white">Recently updated</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button variant="outline" size="sm" className="h-8 border-white/10 text-white hover:bg-white/10">
+                      <Button variant="outline" size="sm" className="h-8 border-neutral-800 text-white hover:bg-neutral-900 bg-neutral-900">
                         Save
                       </Button>
                     </div>
@@ -284,44 +274,44 @@ export function SearchPage() {
                     {mockRepositories.map((repo) => (
                       <div
                         key={repo.id}
-                        className="border border-white/10 rounded-lg p-4 hover:border-white/20 hover:bg-white/5 transition-colors bg-white/5"
+                        className="border border-neutral-800 rounded-lg p-4 hover:border-neutral-700 hover:bg-neutral-900 transition-colors bg-neutral-900"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-base font-semibold text-[#7aa2f7] hover:underline cursor-pointer">
+                              <h3 className="text-base font-semibold text-blue-400 hover:underline cursor-pointer">
                                 {repo.owner}/{repo.name}
                               </h3>
                               {repo.isArchived && (
-                                <Badge variant="outline" className="text-xs border-white/10 text-white/60">
+                                <Badge variant="outline" className="text-xs border-neutral-800 text-neutral-400">
                                   Public archive
                                 </Badge>
                               )}
                             </div>
                             {repo.description && (
-                              <p className="text-sm text-white/80 mb-3 line-clamp-2">{repo.description}</p>
+                              <p className="text-sm text-neutral-300 mb-3 line-clamp-2">{repo.description}</p>
                             )}
-                            <div className="flex items-center gap-4 text-sm text-white/60">
+                            <div className="flex items-center gap-4 text-sm text-neutral-400">
                               {repo.language && (
                                 <div className="flex items-center gap-1.5">
-                                  <div className="w-3 h-3 rounded-full bg-[#7aa2f7]"></div>
-                                  <span>{repo.language}</span>
+                                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                                  <span className="text-neutral-300">{repo.language}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-1">
-                                <Star className="w-4 h-4" />
-                                <span>{repo.stars}</span>
+                                <Star className="w-4 h-4 text-neutral-400" />
+                                <span className="text-neutral-300">{repo.stars}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Calendar className="w-4 h-4" />
-                                <span>Updated {repo.updated}</span>
+                                <Calendar className="w-4 h-4 text-neutral-400" />
+                                <span className="text-neutral-300">Updated {repo.updated}</span>
                               </div>
                             </div>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-shrink-0 border-white/10 text-white hover:bg-white/10 h-8"
+                            className="flex-shrink-0 border-neutral-800 text-white hover:bg-neutral-900 bg-neutral-900 h-8"
                           >
                             <Star className="w-4 h-4 mr-1" />
                             Star
