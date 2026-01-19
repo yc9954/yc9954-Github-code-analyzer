@@ -1,68 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { Checkbox } from "@/app/components/ui/checkbox";
-import { Star, GitBranch, Calendar, BookOpen, MessageSquare, Users, ChevronDown } from "lucide-react";
+import { Star, GitBranch, Calendar, BookOpen, MessageSquare, Users, ChevronDown, Loader2 } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-
-// Mock data for search results
-const mockRepositories = [
-  {
-    id: "1",
-    owner: "benlk",
-    name: "sadface",
-    description: "An IRC Markov chain bot",
-    language: "Python",
-    stars: 15,
-    updated: "Aug 9, 2020",
-    isArchived: true,
-  },
-  {
-    id: "2",
-    owner: "kachak1993",
-    name: "itukraine",
-    description: "sadfa",
-    stars: 22,
-    updated: "Feb 5, 2025",
-  },
-  {
-    id: "3",
-    owner: "siwells",
-    name: "SADFace",
-    description: "The Simple Argument Description Format",
-    language: "Python",
-    stars: 0,
-    updated: "Dec 13, 2025",
-  },
-  {
-    id: "4",
-    owner: "priyapandey2020",
-    name: "sadfaf-51-4questionsolution",
-    language: "HTML",
-    stars: 0,
-    updated: "Sep 16, 2020",
-  },
-  {
-    id: "5",
-    owner: "andelf",
-    name: "sadfarmer",
-    description: "伤心农民一个开心农场辅助程序,已经不更新,欢迎围观原理.",
-    language: "Python",
-    stars: 3,
-    updated: "Sep 22, 2009",
-  },
-  {
-    id: "6",
-    owner: "FlushingBaseball",
-    name: "sdafsadf",
-    description: "sadfas",
-    stars: 0,
-    updated: "Aug 26, 2025",
-  },
-];
+import { searchRepositories, type Repository } from "@/lib/api";
 
 const filterCounts = {
   repositories: 302,
@@ -84,11 +29,17 @@ const languages = [
 ];
 
 export function SearchPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryFromUrl = searchParams.get("q") || "";
   const [searchQuery, setSearchQuery] = useState(queryFromUrl);
   const [activeFilter, setActiveFilter] = useState<"repositories" | "discussions" | "users">("repositories");
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<"best-match" | "stars" | "updated">("best-match");
+  const [totalResults, setTotalResults] = useState(0);
+  const [queryTime, setQueryTime] = useState(0);
 
   // Update search query when URL changes
   useEffect(() => {
@@ -96,13 +47,47 @@ export function SearchPage() {
     setSearchQuery(query);
   }, [searchParams]);
 
+  // Search repositories when query changes
+  useEffect(() => {
+    if (queryFromUrl && activeFilter === "repositories") {
+      performSearch();
+    } else if (!queryFromUrl) {
+      setRepositories([]);
+      setTotalResults(0);
+      setQueryTime(0);
+    }
+  }, [queryFromUrl, activeFilter, selectedLanguages, sortBy]);
+
+  const performSearch = async () => {
+    if (!queryFromUrl.trim()) return;
+
+    setLoading(true);
+    try {
+      const language = selectedLanguages.length > 0 ? selectedLanguages[0] : undefined;
+      const result = await searchRepositories(queryFromUrl, language, sortBy);
+      setRepositories(result.repositories);
+      setTotalResults(result.total);
+      setQueryTime(result.queryTime);
+    } catch (error) {
+      console.error("Search error:", error);
+      setRepositories([]);
+      setTotalResults(0);
+      setQueryTime(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setSearchParams({ q: searchQuery.trim() });
-      // In a real app, this would trigger an API call
-      console.log("Searching for:", searchQuery);
     }
+  };
+
+  const handleRepositoryClick = (repo: Repository) => {
+    // Navigate to repository page with repo info
+    navigate(`/repository?owner=${repo.owner}&repo=${repo.name}`);
   };
 
   return (
@@ -222,10 +207,17 @@ export function SearchPage() {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-xs text-neutral-400">
-                      {mockRepositories.length} results (148 ms)
+                      {loading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Searching...</span>
+                        </div>
+                      ) : (
+                        `${totalResults} results${queryTime > 0 ? ` (${queryTime} ms)` : ''}`
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Select defaultValue="best-match">
+                      <Select value={sortBy} onValueChange={(value) => setSortBy(value as "best-match" | "stars" | "updated")}>
                         <SelectTrigger className="w-40 h-7 bg-neutral-900 border-neutral-800 text-white text-xs">
                           <SelectValue />
                         </SelectTrigger>
@@ -235,62 +227,74 @@ export function SearchPage() {
                           <SelectItem value="updated" className="text-white text-xs">Recently updated</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button variant="outline" size="sm" className="h-7 border-neutral-800 text-white hover:bg-neutral-900 bg-neutral-900 text-xs">
-                        Save
-                      </Button>
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    {mockRepositories.map((repo) => (
-                      <div
-                        key={repo.id}
-                        className="border border-neutral-800 rounded-lg p-3 hover:border-neutral-700 hover:bg-neutral-900 transition-colors bg-neutral-900"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-sm font-semibold text-white hover:underline cursor-pointer">
-                                {repo.owner}/{repo.name}
-                              </h3>
-                              {repo.isArchived && (
-                                <Badge variant="outline" className="text-[10px] border-neutral-800 text-neutral-400">
-                                  Public archive
-                                </Badge>
+                  {loading && repositories.length === 0 ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 text-neutral-400 animate-spin" />
+                    </div>
+                  ) : repositories.length === 0 && queryFromUrl ? (
+                    <div className="text-center py-12">
+                      <p className="text-white/80 text-xs">No repositories found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {repositories.map((repo) => (
+                        <div
+                          key={repo.id || `${repo.owner}/${repo.name}`}
+                          onClick={() => handleRepositoryClick(repo)}
+                          className="border border-neutral-800 rounded-lg p-3 hover:border-neutral-700 hover:bg-neutral-900 transition-colors bg-neutral-900 cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-sm font-semibold text-white hover:underline">
+                                  {repo.owner}/{repo.name}
+                                </h3>
+                                {repo.isArchived && (
+                                  <Badge variant="outline" className="text-[10px] border-neutral-800 text-neutral-400">
+                                    Public archive
+                                  </Badge>
+                                )}
+                              </div>
+                              {repo.description && (
+                                <p className="text-xs text-neutral-300 mb-2 line-clamp-2">{repo.description}</p>
                               )}
-                            </div>
-                            {repo.description && (
-                              <p className="text-xs text-neutral-300 mb-2 line-clamp-2">{repo.description}</p>
-                            )}
-                            <div className="flex items-center gap-4 text-xs text-neutral-400">
-                              {repo.language && (
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                                  <span className="text-neutral-300">{repo.language}</span>
+                              <div className="flex items-center gap-4 text-xs text-neutral-400">
+                                {repo.language && (
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                                    <span className="text-neutral-300">{repo.language}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-3 h-3 text-neutral-400" />
+                                  <span className="text-neutral-300">{repo.stars}</span>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-neutral-400" />
-                                <span className="text-neutral-300">{repo.stars}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-neutral-400" />
-                                <span className="text-neutral-300">Updated {repo.updated}</span>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-neutral-400" />
+                                  <span className="text-neutral-300">Updated {repo.updated}</span>
+                                </div>
                               </div>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-shrink-0 border-neutral-800 text-white hover:bg-neutral-900 bg-neutral-900 h-7 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle star action
+                              }}
+                            >
+                              <Star className="w-3 h-3 mr-1" />
+                              Star
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-shrink-0 border-neutral-800 text-white hover:bg-neutral-900 bg-neutral-900 h-7 text-xs"
-                          >
-                            <Star className="w-3 h-3 mr-1" />
-                            Star
-                          </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
 

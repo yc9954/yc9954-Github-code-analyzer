@@ -1,36 +1,75 @@
 "use client";
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import ClaudeChatInput from "@/app/components/ui/claude-chat-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/app/components/ui/popover";
 import { cn } from "@/app/components/ui/utils";
-import { GitBranch, ChevronDown } from "lucide-react";
-
-const repositories = [
-  { id: "1", name: "web-dashboard", owner: "johndoe", fullName: "johndoe/web-dashboard", stars: 234, forks: 45, description: "Web dashboard application" },
-  { id: "2", name: "api-server", owner: "johndoe", fullName: "johndoe/api-server", stars: 156, forks: 32, description: "RESTful API server" },
-  { id: "3", name: "mobile-app", owner: "johndoe", fullName: "johndoe/mobile-app", stars: 289, forks: 67, description: "Mobile application" },
-  { id: "4", name: "data-pipeline", owner: "johndoe", fullName: "johndoe/data-pipeline", stars: 89, forks: 12, description: "Data processing pipeline" },
-  { id: "5", name: "auth-service", owner: "johndoe", fullName: "johndoe/auth-service", stars: 145, forks: 23, description: "Authentication service" },
-];
-
-const availableBranches = [
-  { name: "main", commits: 234, lastCommit: "2h ago" },
-  { name: "develop", commits: 156, lastCommit: "5h ago" },
-  { name: "feature/auth", commits: 45, lastCommit: "1d ago" },
-  { name: "fix/performance", commits: 12, lastCommit: "2d ago" },
-  { name: "feature/ui-redesign", commits: 28, lastCommit: "3d ago" },
-  { name: "hotfix/login-bug", commits: 6, lastCommit: "4d ago" },
-];
+import { GitBranch, ChevronDown, Loader2 } from "lucide-react";
+import { getUserRepositories, getRepositoryBranches, type Repository, type Branch } from "@/lib/api";
 
 export function RepositoryPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string>("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
   const [branchPopoverOpen, setBranchPopoverOpen] = useState(false);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+
+  // Load repositories from URL params or fetch user repos
+  useEffect(() => {
+    const ownerParam = searchParams.get("owner");
+    const repoParam = searchParams.get("repo");
+
+    if (ownerParam && repoParam) {
+      // Repository was selected from search - set it directly
+      const repoFullName = `${ownerParam}/${repoParam}`;
+      setSelectedRepo(repoFullName);
+      loadBranches(ownerParam, repoParam);
+    } else {
+      // Load user repositories
+      loadRepositories();
+    }
+  }, [searchParams]);
+
+  // Load user repositories
+  const loadRepositories = async () => {
+    setLoadingRepos(true);
+    try {
+      const repos = await getUserRepositories();
+      setRepositories(repos);
+    } catch (error) {
+      console.error("Error loading repositories:", error);
+      // Fallback to empty array
+      setRepositories([]);
+    } finally {
+      setLoadingRepos(false);
+    }
+  };
+
+  // Load branches for selected repository
+  const loadBranches = async (owner: string, repo: string) => {
+    setLoadingBranches(true);
+    try {
+      const branches = await getRepositoryBranches(owner, repo);
+      setAvailableBranches(branches);
+      // Auto-select main branch if available
+      if (branches.length > 0 && !selectedBranch) {
+        const mainBranch = branches.find(b => b.name === 'main') || branches[0];
+        setSelectedBranch(mainBranch.name);
+      }
+    } catch (error) {
+      console.error("Error loading branches:", error);
+      setAvailableBranches([]);
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
 
   const handleSendMessage = (data: {
     message: string;
@@ -39,18 +78,19 @@ export function RepositoryPage() {
     model: string;
     isThinkingEnabled: boolean;
   }) => {
-    if (selectedRepo && selectedBranch) {
-      const repo = repositories.find(r => r.id === selectedRepo);
-      navigate(`/commits?repo=${repo?.name}&branch=${selectedBranch}`);
+    if (selectedRepoData && selectedBranch) {
+      const owner = selectedRepoData.owner;
+      const repo = selectedRepoData.name;
+      navigate(`/commits?owner=${owner}&repo=${repo}&branch=${selectedBranch}`);
     }
   };
 
-  const handleRepoSelect = (repoId: string) => {
-    setSelectedRepo(repoId);
+  const handleRepoSelect = (repo: Repository) => {
+    const repoFullName = repo.fullName || `${repo.owner}/${repo.name}`;
+    setSelectedRepo(repoFullName);
     setRepoPopoverOpen(false);
-    if (selectedRepo !== repoId) {
-      setSelectedBranch("");
-    }
+    setSelectedBranch(""); // Reset branch when repo changes
+    loadBranches(repo.owner, repo.name);
   };
 
   const handleBranchSelect = (branch: string) => {
@@ -58,7 +98,14 @@ export function RepositoryPage() {
     setBranchPopoverOpen(false);
   };
 
-  const selectedRepoData = repositories.find(r => r.id === selectedRepo);
+  const selectedRepoData = repositories.find(r => {
+    const fullName = r.fullName || `${r.owner}/${r.name}`;
+    return fullName === selectedRepo;
+  }) || (selectedRepo ? {
+    owner: selectedRepo.split('/')[0],
+    name: selectedRepo.split('/')[1],
+    fullName: selectedRepo,
+  } : null);
 
   return (
     <DashboardLayout>
@@ -96,26 +143,42 @@ export function RepositoryPage() {
                     align="start"
                     side="bottom"
                   >
-                    <div className="space-y-1">
-                      {repositories.map((repo) => (
-                        <div
-                          key={repo.id}
-                          onClick={() => handleRepoSelect(repo.id)}
-                          className={cn(
-                            "p-3 rounded-lg cursor-pointer transition-colors",
-                            selectedRepo === repo.id
-                              ? "bg-blue-500/10 border border-blue-500"
-                              : "hover:bg-neutral-800"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <GitBranch className="w-4 h-4 text-neutral-400" />
-                            <span className="text-sm text-white font-medium">{repo.fullName}</span>
-                          </div>
-                          <p className="text-xs text-neutral-400 mt-1">{repo.description}</p>
-                        </div>
-                      ))}
-                    </div>
+                    {loadingRepos ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
+                      </div>
+                    ) : repositories.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-xs text-neutral-400">No repositories found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {repositories.map((repo) => {
+                          const repoFullName = repo.fullName || `${repo.owner}/${repo.name}`;
+                          const isSelected = selectedRepo === repoFullName;
+                          return (
+                            <div
+                              key={repo.id || repoFullName}
+                              onClick={() => handleRepoSelect(repo)}
+                              className={cn(
+                                "p-3 rounded-lg cursor-pointer transition-colors",
+                                isSelected
+                                  ? "bg-blue-500/10 border border-blue-500"
+                                  : "hover:bg-neutral-800"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <GitBranch className="w-4 h-4 text-neutral-400" />
+                                <span className="text-sm text-white font-medium">{repoFullName}</span>
+                              </div>
+                              {repo.description && (
+                                <p className="text-xs text-neutral-400 mt-1">{repo.description}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </PopoverContent>
                 </Popover>
 
@@ -146,34 +209,44 @@ export function RepositoryPage() {
                     align="start"
                     side="bottom"
                   >
-                    <div className="space-y-1">
-                      {availableBranches.map((branch) => (
-                        <div
-                          key={branch.name}
-                          onClick={() => handleBranchSelect(branch.name)}
-                          className={cn(
-                            "p-3 rounded-lg cursor-pointer transition-colors",
-                            selectedBranch === branch.name
-                              ? "bg-blue-500/10 border border-blue-500"
-                              : "hover:bg-neutral-800"
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <GitBranch className="w-4 h-4 text-neutral-400" />
-                                <span className="text-sm text-white font-medium">{branch.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-neutral-400">{branch.commits} commits</span>
-                                <span className="text-xs text-neutral-500">·</span>
-                                <span className="text-xs text-neutral-400">{branch.lastCommit}</span>
+                    {loadingBranches ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
+                      </div>
+                    ) : availableBranches.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-xs text-neutral-400">No branches found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {availableBranches.map((branch) => (
+                          <div
+                            key={branch.name}
+                            onClick={() => handleBranchSelect(branch.name)}
+                            className={cn(
+                              "p-3 rounded-lg cursor-pointer transition-colors",
+                              selectedBranch === branch.name
+                                ? "bg-blue-500/10 border border-blue-500"
+                                : "hover:bg-neutral-800"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <GitBranch className="w-4 h-4 text-neutral-400" />
+                                  <span className="text-sm text-white font-medium">{branch.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs text-neutral-400">{branch.commits} commits</span>
+                                  <span className="text-xs text-neutral-500">·</span>
+                                  <span className="text-xs text-neutral-400">{branch.lastCommit}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </PopoverContent>
                 </Popover>
               </div>
