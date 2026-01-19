@@ -122,7 +122,7 @@ export function RepositoryPage() {
                   <div className="text-xs text-white/60 mb-2">
                     {repositories.find(r => r.id === selectedRepo)?.owner}/{repositories.find(r => r.id === selectedRepo)?.name}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {availableBranches.map((branch) => (
                       <div
                         key={branch.name}
