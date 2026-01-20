@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/app/components/Sidebar";
 import { TopBar } from "@/app/components/TopBar";
 
@@ -8,6 +9,16 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // 인증 체크: 토큰이 없으면 로그인 페이지로 리다이렉트
+  useEffect(() => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      console.log('No access token found, redirecting to login');
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
 
   return (
     <div className="relative h-screen bg-black">

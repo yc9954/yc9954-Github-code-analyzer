@@ -43,10 +43,16 @@ export function RepositoryPage() {
     try {
       const repos = await getUserRepositories();
       setRepositories(repos);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading repositories:", error);
-      // Fallback to empty array
-      setRepositories([]);
+      // 인증 에러인 경우 DashboardLayout이 처리하므로 여기서는 빈 배열로 설정
+      if (error.message?.includes('인증이 필요합니다')) {
+        // DashboardLayout의 인증 체크가 리다이렉트를 처리함
+        setRepositories([]);
+      } else {
+        // 다른 에러의 경우에도 빈 배열로 설정
+        setRepositories([]);
+      }
     } finally {
       setLoadingRepos(false);
     }

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { LandingPage } from "@/app/pages/LandingPage";
 import { LoginPage } from "@/app/pages/LoginPage";
+import { AuthCallback } from "@/app/pages/AuthCallback";
 import { DashboardPage } from "@/app/pages/DashboardPage";
 import { RepositoryPage } from "@/app/pages/RepositoryPage";
 import { SprintPage } from "@/app/pages/SprintPage";
@@ -14,7 +15,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/repository" element={<RepositoryPage />} />
         <Route path="/sprint" element={<SprintPage />} />

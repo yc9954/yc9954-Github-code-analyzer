@@ -1,8 +1,59 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import ResponsiveHeroBanner from "@/app/components/ResponsiveHeroBanner";
 import { Github } from "lucide-react";
 
 export function LandingPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // 루트 경로에서도 콜백 파라미터 확인 (백엔드가 루트로 리다이렉트하는 경우 대비)
+  useEffect(() => {
+    const accessToken = searchParams.get('accessToken');
+    const refreshToken = searchParams.get('refreshToken');
+    const type = searchParams.get('type');
+    const installationId = searchParams.get('installation_id');
+    const setupAction = searchParams.get('setup_action');
+
+    console.log('LandingPage - Checking for callback params:', {
+      accessToken: accessToken ? 'present' : 'missing',
+      refreshToken: refreshToken ? 'present' : 'missing',
+      type,
+      installationId,
+      setupAction,
+      currentUrl: window.location.href,
+    });
+
+    // 토큰이 있으면 AuthCallback으로 리다이렉트
+    if (accessToken && refreshToken) {
+      console.log('Found tokens in root path, redirecting to /auth/callback');
+      const params = new URLSearchParams();
+      params.set('accessToken', accessToken);
+      params.set('refreshToken', refreshToken);
+      navigate(`/auth/callback?${params.toString()}`, { replace: true });
+      return;
+    }
+
+    // 설치 완료 케이스
+    if (type === 'installation' && installationId && setupAction === 'install') {
+      console.log('Found installation params in root path, redirecting to /auth/callback');
+      const params = new URLSearchParams();
+      params.set('type', type);
+      params.set('installation_id', installationId);
+      params.set('setup_action', setupAction);
+      navigate(`/auth/callback?${params.toString()}`, { replace: true });
+      return;
+    }
+
+    // 백엔드가 자신의 도메인으로 리다이렉트한 경우를 대비
+    // localStorage나 sessionStorage에 저장된 토큰이 있는지 확인
+    const storedToken = localStorage.getItem('accessToken');
+    if (storedToken) {
+      console.log('Found stored token, user is already logged in');
+      // 이미 로그인된 상태면 그대로 유지
+    }
+  }, [searchParams, navigate]);
+
   return (
     <div className="min-h-screen">
       <ResponsiveHeroBanner

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 처리 중...</title>
+</head>
+<body>
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
+        <div style="text-align: center;">
+            <h2>로그인 처리 중...</h2>
+            <p>잠시만 기다려주세요.</p>
+        </div>
+    </div>
+
+    <script>
+        // URL에서 토큰 파라미터 추출
+        const urlParams = new URLSearchParams(window.location.search);
+        const accessToken = urlParams.get('accessToken');
+        const refreshToken = urlParams.get('refreshToken');
+        const type = urlParams.get('type');
+        const installationId = urlParams.get('installation_id');
+        const setupAction = urlParams.get('setup_action');
+
+        // 프론트엔드 URL (개발 환경)
+        const FRONTEND_URL = 'http://localhost:5173';
+        // 프로덕션 환경의 경우:
+        // const FRONTEND_URL = 'https://your-frontend-domain.com';
+
+        // 토큰이 있으면 프론트엔드로 리다이렉트
+        // 같은 창에서 리다이렉트되도록 window.location.replace 사용
+        if (accessToken && refreshToken) {
+            const redirectUrl = `${FRONTEND_URL}/auth/callback?accessToken=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}`;
+            console.log('Redirecting to frontend:', redirectUrl);
+            // replace를 사용하여 같은 창에서 리다이렉트 (히스토리에 남기지 않음)
+            window.location.replace(redirectUrl);
+        }
+        // GitHub App 설치 완료 케이스
+        else if (type === 'installation' && installationId && setupAction === 'install') {
+            const redirectUrl = `${FRONTEND_URL}/auth/callback?type=${encodeURIComponent(type)}&installation_id=${encodeURIComponent(installationId)}&setup_action=${encodeURIComponent(setupAction)}`;
+            console.log('Redirecting to frontend (installation):', redirectUrl);
+            window.location.replace(redirectUrl);
+        }
+        // 토큰이 없는 경우
+        else {
+            console.error('No tokens found in URL');
+            // 프론트엔드 로그인 페이지로 리다이렉트
+            window.location.replace(`${FRONTEND_URL}/login?error=no_tokens`);
+        }
+    </script>
+</body>
+</html>

@@ -36,6 +36,8 @@ async function apiCall<T>(
     if (response.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      // 리다이렉트는 컴포넌트에서 처리하도록 함 (api.ts는 순수 함수이므로)
       throw new Error('인증이 필요합니다. 다시 로그인해주세요.');
     }
     const errorData = await response.json().catch(() => ({}));
