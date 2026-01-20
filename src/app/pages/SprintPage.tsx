@@ -1,7 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
-import { getSprints, getMySprints, getSprintRankings, type Sprint, type SprintRanking } from "@/lib/api";
+import {
+  getSprints,
+  getMySprints,
+  getSprintRankings,
+  createSprint,
+  registerSprint,
+  getMyProfile,
+  updateSprint,
+  banTeam,
+  approveTeam,
+  getSprintRegistrations,
+  type Sprint,
+  type SprintRanking,
+  type UserResponse,
+  type SprintRegistration
+} from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -9,10 +24,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/app/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare, X, User } from "lucide-react";
 import { FaTrophy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Progress } from "@/app/components/ui/progress";
+import { Switch } from "@/app/components/ui/switch";
 import { Calendar } from "@/app/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/app/components/ui/card";
 import {
@@ -39,21 +55,7 @@ const allSprints = [
   { id: 4, name: "Summer Hackathon 2025", teams: 20, startDate: "Dec 1", endDate: "Dec 7", status: "completed", participants: 80 },
 ];
 
-const leaderboardData = [
-  { rank: 1, team: "Team Alpha", score: 2456, commits: 234, members: 4, change: 2 },
-  { rank: 2, team: "Code Warriors", score: 2301, commits: 215, members: 5, change: -1 },
-  { rank: 3, team: "Dev Squad", score: 2189, commits: 198, members: 4, change: 1 },
-  { rank: 4, team: "Tech Titans", score: 1987, commits: 176, members: 3, change: 0 },
-  { rank: 5, team: "Byte Busters", score: 1856, commits: 165, members: 4, change: 3 },
-];
 
-const sprintIndividualRanking = [
-  { rank: 1, name: "Alice Johnson", username: "alicej", commits: 145, score: 95 },
-  { rank: 2, name: "Bob Smith", username: "bobsmith", commits: 123, score: 92 },
-  { rank: 3, name: "Carol White", username: "carolw", commits: 98, score: 89 },
-  { rank: 4, name: "David Brown", username: "davidb", commits: 87, score: 85 },
-  { rank: 5, name: "Emma Davis", username: "emmad", commits: 76, score: 82 },
-];
 
 const myRepositories = [
   { id: 1, name: "web-dashboard", selected: false },
@@ -312,7 +314,7 @@ const CalendarWithRangePresets = ({
 export function SprintPage() {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSprint, setSelectedSprint] = useState<number | null>(null);
+  const [selectedSprint, setSelectedSprint] = useState<string | null>(null);
   const [selectedRepos, setSelectedRepos] = useState<number[]>([]);
   const [expandedCommits, setExpandedCommits] = useState<string[]>([]);
   const [aiOpen, setAiOpen] = useState(false);
@@ -320,9 +322,131 @@ export function SprintPage() {
   const [sprintRankings, setSprintRankings] = useState<SprintRanking[]>([]);
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [loadingRankings, setLoadingRankings] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [teamIdInput, setTeamIdInput] = useState("");
+  const [registrations, setRegistrations] = useState<SprintRegistration[]>([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+
+  // Load user profile to get ID
+  useEffect(() => {
+    getMyProfile().then(profile => {
+      setUserId(profile.id);
+      setCurrentUser(profile);
+    }).catch(err => console.error("Failed to load profile", err));
+  }, []);
+
+  // Removed duplicate handleCreateSprint to avoid confusion
+
+
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    description: "",
+    isPublic: true,
+  });
+
+  const onCreateSprint = async () => {
+    if (!createForm.name || !startDate || !endDate || !currentUser) {
+      alert("Please fill in all required fields and ensure you are logged in.");
+      return;
+    }
+
+    try {
+      await createSprint({
+        name: createForm.name,
+        description: createForm.description,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        isPrivate: !createForm.isPublic,
+        isOpen: true,
+        managerId: currentUser.id,
+      });
+      alert("Sprint created successfully!");
+      setViewMode("list");
+      setCreateForm({ name: "", description: "", isPublic: true });
+      // Reload sprints
+      loadSprints();
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "Failed to create sprint.");
+    }
+  };
+
+  const onUpdateSprint = async () => {
+    if (!selectedSprint || !currentUser) return;
+    setIsUpdating(true);
+    try {
+      await updateSprint(selectedSprint, {
+        name: createForm.name,
+        description: createForm.description,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        isPrivate: false, // Default or toggle
+        isOpen: true,    // Default or toggle
+        managerId: currentUser.id,
+      });
+      alert("Sprint updated successfully!");
+      loadSprints();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update sprint.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleBanTeam = async (teamId: string) => {
+    if (!selectedSprint || !confirm("Are you sure you want to ban this team?")) return;
+    try {
+      await banTeam(selectedSprint, teamId);
+      alert("Team banned successfully.");
+      // Refresh rankings
+      const data = await getSprintRankings(selectedSprint, rankingViewType === 'team' ? 'TEAM' : 'INDIVIDUAL');
+      setSprintRankings(data);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to ban team.");
+    }
+  };
+  const handleApproveTeamResult = async (teamId: string, approve: boolean) => {
+    if (!selectedSprint) return;
+    try {
+      await approveTeam(selectedSprint, teamId, approve);
+      alert(approve ? "Team approved!" : "Team rejected.");
+      // Refresh
+      const regData = await getSprintRegistrations(selectedSprint);
+      setRegistrations(regData);
+      const rankingData = await getSprintRankings(selectedSprint, rankingViewType === 'team' ? 'TEAM' : 'INDIVIDUAL');
+      setSprintRankings(rankingData);
+    } catch (e) {
+      console.error(e);
+      alert("Action failed.");
+    }
+  };
+  const onRegisterSprint = async () => {
+    if (!selectedSprint || selectedRepos.length === 0 || !teamIdInput) {
+      alert("Please select a sprint, a repository, and enter a Team ID.");
+      return;
+    }
+
+    try {
+      // Assuming single repo registration for now based on API structure (repoId string)
+      // If API accepted array, we'd loop.
+      // API: repoId: string.
+      // So we register the first selected repo.
+      await registerSprint(selectedSprint.toString(), {
+        teamId: teamIdInput,
+        repoId: selectedRepos[0].toString()
+      });
+      alert("Registration successful!");
+      setViewMode("list");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to register.");
+    }
+  };
 
   const toggleCommit = (sha: string) => {
-    setExpandedCommits(prev => 
+    setExpandedCommits(prev =>
       prev.includes(sha) ? prev.filter(s => s !== sha) : [...prev, sha]
     );
   };
@@ -333,9 +457,11 @@ export function SprintPage() {
     );
   };
 
-  const [viewMode, setViewMode] = useState<"list" | "participate" | "ranking" | "create">("list");
+  const [viewMode, setViewMode] = useState<"list" | "participate" | "ranking" | "create" | "manage">("list");
   const [rankingViewType, setRankingViewType] = useState<"individual" | "team">("team");
-  
+  const [currentUser, setCurrentUser] = useState<UserResponse | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Date range state for calendar
   const today = new Date();
   const last7Days = {
@@ -347,37 +473,97 @@ export function SprintPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const loadSprints = async () => {
+    setLoadingSprints(true);
+    try {
+      const data = await getSprints();
+      // The API returns a list. If it's successful, use it.
+      setSprints(data || []);
+    } catch (error) {
+      console.error('Error loading sprints:', error);
+      // Fallback to mock data ONLY on error, or maybe show error state?
+      // Since user said "Sprint list bad", let's try to not mask the error with mocks if possible,
+      // but if the user wants functionality, maybe mocks are distracting.
+      // However, the original code had mocks. I'll keep mocks for error cases but logging is important.
+      setSprints(allSprints.map((s) => ({
+        id: s.id.toString(),
+        name: s.name,
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        isPrivate: false,
+        isOpen: s.status === 'active',
+        teamsCount: s.teams,
+        participantsCount: s.participants,
+        status: s.status,
+        managerName: "admin"
+      })));
+    } finally {
+      setLoadingSprints(false);
+    }
+  };
+
   // Load sprints from API
   useEffect(() => {
-    const loadSprints = async () => {
-      setLoadingSprints(true);
-      try {
-        const data = await getSprints();
-        setSprints(data);
-      } catch (error) {
-        console.error('Error loading sprints:', error);
-        // Fallback to mock data if API fails
-        setSprints(allSprints.map((s, idx) => ({
-          id: s.id.toString(),
-          name: s.name,
-          startDate: new Date().toISOString(),
-          endDate: new Date().toISOString(),
-          isPrivate: false,
-          isOpen: true,
-          teamsCount: s.teams,
-          participantsCount: s.participants,
-          status: s.status,
-        })));
-      } finally {
-        setLoadingSprints(false);
-      }
-    };
     loadSprints();
   }, []);
 
-  // Load sprint rankings when a sprint is selected
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Filter, Sort, and Paginate
+  const filteredSprints = useMemo(() => {
+    let result = [...sprints];
+
+    // 1. Search Filter
+    if (searchQuery) {
+      result = result.filter(s =>
+        s.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // 2. Status Filter
+    if (statusFilter !== "all") {
+      result = result.filter(s => {
+        const isActive = s.status === 'active' || s.isOpen;
+        return statusFilter === 'active' ? isActive : !isActive;
+      });
+    }
+
+    // 3. Sort: Active First, then Newest
+    result.sort((a, b) => {
+      // Prioritize explicit 'active' status
+      const aActive = a.status === 'active';
+      const bActive = b.status === 'active';
+
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+
+      // If both active or both inactive, sort by date (newest first)
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    });
+
+    return result;
+  }, [sprints, searchQuery, statusFilter]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredSprints.length / ITEMS_PER_PAGE);
+  const paginatedSprints = filteredSprints.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page when filter changes
   useEffect(() => {
-    if (selectedSprint && viewMode === 'ranking') {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const selectedSprintData = sprints.find((s) => s.id === selectedSprint);
+  const isManager = currentUser && selectedSprintData && (selectedSprintData.managerName === currentUser.username);
+
+  // Load sprint rankings and registrations when a sprint is selected
+  useEffect(() => {
+    if (selectedSprint && (viewMode === 'ranking' || viewMode === 'manage')) {
       const loadRankings = async () => {
         setLoadingRankings(true);
         try {
@@ -390,9 +576,24 @@ export function SprintPage() {
           setLoadingRankings(false);
         }
       };
+
+      const loadRegistrations = async () => {
+        if (!isManager) return;
+        setLoadingRegistrations(true);
+        try {
+          const data = await getSprintRegistrations(selectedSprint);
+          setRegistrations(data);
+        } catch (error) {
+          console.error('Error loading registrations:', error);
+        } finally {
+          setLoadingRegistrations(false);
+        }
+      };
+
       loadRankings();
+      if (isManager) loadRegistrations();
     }
-  }, [selectedSprint, viewMode, rankingViewType, sprints]);
+  }, [selectedSprint, viewMode, rankingViewType, sprints, isManager]);
 
   // Check URL query parameter for ranking view
   useEffect(() => {
@@ -420,7 +621,7 @@ export function SprintPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-base font-semibold text-white">Sprints</h1>
             <div className="flex items-center gap-2">
-              <Button 
+              <Button
                 onClick={() => setViewMode("ranking")}
                 variant="outline"
                 className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-xs px-3"
@@ -428,7 +629,26 @@ export function SprintPage() {
                 <FaTrophy className="w-4 h-4 mr-1" />
                 Ranking
               </Button>
-              <Button 
+              {isManager && (
+                <Button
+                  onClick={() => {
+                    setViewMode("manage");
+                    if (selectedSprintData) {
+                      setCreateForm({
+                        name: selectedSprintData.name,
+                        description: selectedSprintData.description || "",
+                        isPublic: !selectedSprintData.isPrivate,
+                      });
+                      setStartDate(selectedSprintData.startDate.split('T')[0]);
+                      setEndDate(selectedSprintData.endDate.split('T')[0]);
+                    }
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white border-0 h-8 text-xs px-3"
+                >
+                  Manage
+                </Button>
+              )}
+              <Button
                 onClick={() => setViewMode("create")}
                 className="bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-xs px-3"
               >
@@ -443,534 +663,816 @@ export function SprintPage() {
           <div className="max-w-6xl mx-auto space-y-2">
             {/* Main Content */}
             {viewMode === "list" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-                  <Input
-                    placeholder="Search sprints..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 bg-neutral-900 border-neutral-800 text-white h-8 text-sm"
-                  />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                    <Input
+                      placeholder="Search sprints..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 bg-neutral-900 border-neutral-800 text-white h-8 text-sm"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-28 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-neutral-900 border-neutral-800">
+                      <SelectItem value="all" className="text-white text-sm">All</SelectItem>
+                      <SelectItem value="active" className="text-white text-sm">Active</SelectItem>
+                      <SelectItem value="completed" className="text-white text-sm">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-28 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-neutral-800">
-                    <SelectItem value="all" className="text-white text-sm">All</SelectItem>
-                    <SelectItem value="active" className="text-white text-sm">Active</SelectItem>
-                    <SelectItem value="completed" className="text-white text-sm">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                      <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Sprint Name</TableHead>
-                      <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Period</TableHead>
-                      <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Teams</TableHead>
-                      <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Participants</TableHead>
-                      <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Status</TableHead>
-                      <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allSprints.map((sprint) => (
-                      <TableRow key={sprint.id} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
-                        <TableCell className="font-medium text-white text-sm py-1">{sprint.name}</TableCell>
-                        <TableCell className="text-white/60 text-sm py-1">{sprint.startDate} - {sprint.endDate}</TableCell>
-                        <TableCell className="text-white text-right text-sm py-1">{sprint.teams}</TableCell>
-                        <TableCell className="text-neutral-400 text-right text-sm py-1">{sprint.participants}</TableCell>
-                        <TableCell className="py-1">
-                          <Badge className={sprint.status === 'active' ? 'bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-1.5' : 'bg-neutral-900 text-neutral-400 border-neutral-800 text-xs h-4 px-1.5'}>
-                            {sprint.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right py-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-7 text-xs px-2 text-neutral-400 hover:text-white"
-                            onClick={() => setViewMode("participate")}
-                          >
-                            Participate
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-
-          {viewMode === "participate" && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                {/* Left - Sprint Selection & Repository */}
-                <div className="lg:col-span-2 space-y-2">
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
-                    <h3 className="text-sm font-medium text-white mb-2">Select Sprint</h3>
-                    <Select onValueChange={(value) => setSelectedSprint(Number(value))}>
-                      <SelectTrigger className="bg-black border-neutral-800 text-white h-8 text-sm">
-                        <SelectValue placeholder="Choose a sprint to participate" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-neutral-900 border-neutral-800">
-                        {allSprints.filter(s => s.status === 'active').map((sprint) => (
-                          <SelectItem key={sprint.id} value={String(sprint.id)} className="text-white text-sm">
-                            {sprint.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
-                    <h3 className="text-sm font-medium text-white mb-2">Register Repositories</h3>
-                    <div className="space-y-2 mb-3">
-                      {myRepositories.map((repo) => (
-                        <div
-                          key={repo.id}
-                          onClick={() => toggleRepo(repo.id)}
-                          className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${
-                            selectedRepos.includes(repo.id)
-                              ? 'border-blue-500 bg-blue-500/10'
-                              : 'border-neutral-800 hover:bg-neutral-800'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <GitBranch className="w-4 h-4 text-neutral-400" />
-                            <span className="text-sm text-white">{repo.name}</span>
-                          </div>
-                          {selectedRepos.includes(repo.id) && (
-                            <Badge className="bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-2">
-                              Selected
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-sm">
-                      Register for Sprint
-                    </Button>
-                  </div>
-
-                  {/* Team Members */}
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
-                    <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                      <h3 className="text-sm font-medium text-white">Team Members</h3>
-                    </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                          <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Member</TableHead>
-                          <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Role</TableHead>
-                          <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
-                          <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Contribution</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {teamMembers.map((member) => (
-                          <TableRow key={member.username} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
-                            <TableCell className="py-1">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="w-6 h-6 border border-neutral-800">
-                                  <AvatarImage src={defaultAvatar} />
-                                  <AvatarFallback className="bg-neutral-900 text-white text-xs">
-                                    {member.name.split(' ').map(n => n[0]).join('')}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="text-sm font-medium text-white">{member.name}</div>
-                                  <div className="text-xs text-neutral-400">@{member.username}</div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm text-neutral-400 py-1">{member.role}</TableCell>
-                            <TableCell className="text-sm text-white text-right py-1">{member.commits}</TableCell>
-                            <TableCell className="py-1">
-                              <div className="flex items-center gap-1.5">
-                                <Progress value={member.contribution} className="flex-1 h-1.5" />
-                                <span className="text-xs text-neutral-400 min-w-[35px]">{member.contribution}%</span>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {viewMode === "ranking" && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-white">Sprint Rankings</h2>
-                <Button 
-                  variant="ghost"
-                  onClick={() => setViewMode("list")}
-                  className="text-neutral-400 hover:text-white h-7 text-xs px-2"
-                >
-                  ← Back
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Select defaultValue="1">
-                  <SelectTrigger className="w-64 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-neutral-800">
-                    {allSprints.map((sprint) => (
-                      <SelectItem key={sprint.id} value={String(sprint.id)} className="text-white text-sm">
-                        {sprint.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={rankingViewType} onValueChange={(value) => setRankingViewType(value as "individual" | "team")}>
-                  <SelectTrigger className="w-32 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-neutral-800">
-                    <SelectItem value="individual" className="text-white focus:bg-neutral-800 text-sm">Individual</SelectItem>
-                    <SelectItem value="team" className="text-white focus:bg-neutral-800 text-sm">Team</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Team Ranking */}
-              {rankingViewType === "team" && (
-                <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
-                  <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-white">Team Leaderboard</h3>
-                      <span className="text-xs text-neutral-400">Updated 5 min ago</span>
-                    </div>
-                  </div>
+                <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                        <TableHead className="text-neutral-400 font-medium text-xs w-12 h-7 py-1">Rank</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Team</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Score</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Commits</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Members</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Change</TableHead>
+                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Sprint Name</TableHead>
+                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Period</TableHead>
+                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Teams</TableHead>
+                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Participants</TableHead>
+                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Status</TableHead>
+                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leaderboardData.map((team) => (
-                        <TableRow key={team.rank} className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8">
-                          <TableCell className="font-medium text-white text-sm py-1">
-                            <div className="flex items-center gap-1">
-                              {team.rank === 1 && (
-                                <div 
-                                  className="relative w-4 h-4 flex items-center justify-center"
-                                  style={{
-                                    background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 16px rgba(255,215,0,0.5), inset 0 0 10px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)'
-                                  }}
-                                >
-                                  <FaTrophy 
-                                    className="w-3 h-3 relative z-10" 
-                                    style={{
-                                      color: '#FFD700',
-                                      filter: 'drop-shadow(0 0 6px rgba(255,215,0,0.9)) drop-shadow(0 0 12px rgba(255,215,0,0.5))'
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              {team.rank === 2 && (
-                                <div 
-                                  className="relative w-4 h-4 flex items-center justify-center"
-                                  style={{
-                                    background: 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 16px rgba(192,192,192,0.5), inset 0 0 10px rgba(192,192,192,0.3), 0 0 0 1px rgba(192,192,192,0.2)'
-                                  }}
-                                >
-                                  <FaTrophy 
-                                    className="w-3 h-3 relative z-10" 
-                                    style={{
-                                      color: '#C0C0C0',
-                                      filter: 'drop-shadow(0 0 6px rgba(192,192,192,0.9)) drop-shadow(0 0 12px rgba(192,192,192,0.5))'
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              {team.rank === 3 && (
-                                <div 
-                                  className="relative w-4 h-4 flex items-center justify-center"
-                                  style={{
-                                    background: 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(184,115,51,0.15))',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 16px rgba(205,127,50,0.5), inset 0 0 10px rgba(205,127,50,0.3), 0 0 0 1px rgba(205,127,50,0.2)'
-                                  }}
-                                >
-                                  <FaTrophy 
-                                    className="w-3 h-3 relative z-10" 
-                                    style={{
-                                      color: '#CD7F32',
-                                      filter: 'drop-shadow(0 0 6px rgba(205,127,50,0.9)) drop-shadow(0 0 12px rgba(205,127,50,0.5))'
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              <span>#{team.rank}</span>
-                            </div>
+                      {paginatedSprints.map((sprint) => (
+                        <TableRow key={sprint.id} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                          <TableCell className="font-medium text-white text-sm py-1">{sprint.name}</TableCell>
+                          <TableCell className="text-white/60 text-sm py-1">
+                            {format(new Date(sprint.startDate), 'MMM dd')} - {format(new Date(sprint.endDate), 'MMM dd')}
                           </TableCell>
-                          <TableCell className="font-medium text-white text-sm py-1">{team.team}</TableCell>
-                          <TableCell className="text-white text-right text-sm py-1">{team.score.toLocaleString()}</TableCell>
-                          <TableCell className="text-neutral-400 text-right text-sm py-1">{team.commits}</TableCell>
-                          <TableCell className="text-neutral-400 text-right text-sm py-1">{team.members}</TableCell>
+                          <TableCell className="text-white text-right text-sm py-1">{sprint.teamsCount || 0}</TableCell>
+                          <TableCell className="text-neutral-400 text-right text-sm py-1">{sprint.participantsCount || 0}</TableCell>
+                          <TableCell className="py-1">
+                            <Badge className={sprint.status === 'active' || sprint.isOpen ? 'bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-1.5' : 'bg-neutral-900 text-neutral-400 border-neutral-800 text-xs h-4 px-1.5'}>
+                              {sprint.status || (sprint.isOpen ? 'active' : 'closed')}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right py-1">
-                            {team.change > 0 ? (
-                              <div className="flex items-center justify-end gap-1 text-blue-400">
-                                <TrendingUp className="w-4 h-4" />
-                                <span className="text-xs">+{team.change}</span>
-                              </div>
-                            ) : team.change < 0 ? (
-                              <div className="flex items-center justify-end gap-1 text-red-400">
-                                <TrendingDown className="w-4 h-4" />
-                                <span className="text-xs">{team.change}</span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-neutral-400">-</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs px-2 text-neutral-400 hover:text-white"
+                              onClick={() => {
+                                setSelectedSprint(sprint.id);
+                                setViewMode("participate");
+                              }}
+                            >
+                              Participate
+                            </Button>
+                            {currentUser && sprint.managerName === currentUser.username && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs px-2 text-red-400 hover:text-red-300"
+                                onClick={() => {
+                                  setSelectedSprint(sprint.id);
+                                  setViewMode("manage");
+                                  setCreateForm({
+                                    name: sprint.name,
+                                    description: sprint.description || "",
+                                    isPublic: !sprint.isPrivate,
+                                  });
+                                  setStartDate(sprint.startDate.split('T')[0]);
+                                  setEndDate(sprint.endDate.split('T')[0]);
+                                }}
+                              >
+                                Manage
+                              </Button>
                             )}
                           </TableCell>
                         </TableRow>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              {/* Individual Ranking */}
-              {rankingViewType === "individual" && (
-                <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
-                  <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-white">Individual Leaderboard</h3>
-                      <span className="text-xs text-neutral-400">Updated 5 min ago</span>
-                    </div>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                        <TableHead className="text-neutral-400 font-medium text-xs w-12 h-7 py-1">Rank</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Developer</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Score</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sprintIndividualRanking.map((person) => (
-                        <TableRow 
-                          key={person.rank} 
-                          className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8"
-                        >
-                          <TableCell className="font-medium text-white py-1">
-                            <div className="flex items-center gap-1.5">
-                              {person.rank === 1 && (
-                                <div 
-                                  className="relative w-4 h-4 flex items-center justify-center"
-                                  style={{
-                                    background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 16px rgba(255,215,0,0.5), inset 0 0 10px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)'
-                                  }}
-                                >
-                                  <FaTrophy 
-                                    className="w-3 h-3 relative z-10" 
-                                    style={{
-                                      color: '#FFD700',
-                                      filter: 'drop-shadow(0 0 6px rgba(255,215,0,0.9)) drop-shadow(0 0 12px rgba(255,215,0,0.5))'
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              {person.rank === 2 && (
-                                <div 
-                                  className="relative w-4 h-4 flex items-center justify-center"
-                                  style={{
-                                    background: 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 16px rgba(192,192,192,0.5), inset 0 0 10px rgba(192,192,192,0.3), 0 0 0 1px rgba(192,192,192,0.2)'
-                                  }}
-                                >
-                                  <FaTrophy 
-                                    className="w-3 h-3 relative z-10" 
-                                    style={{
-                                      color: '#C0C0C0',
-                                      filter: 'drop-shadow(0 0 6px rgba(192,192,192,0.9)) drop-shadow(0 0 12px rgba(192,192,192,0.5))'
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              {person.rank === 3 && (
-                                <div 
-                                  className="relative w-4 h-4 flex items-center justify-center"
-                                  style={{
-                                    background: 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(184,115,51,0.15))',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 16px rgba(205,127,50,0.5), inset 0 0 10px rgba(205,127,50,0.3), 0 0 0 1px rgba(205,127,50,0.2)'
-                                  }}
-                                >
-                                  <FaTrophy 
-                                    className="w-3 h-3 relative z-10" 
-                                    style={{
-                                      color: '#CD7F32',
-                                      filter: 'drop-shadow(0 0 6px rgba(205,127,50,0.9)) drop-shadow(0 0 12px rgba(205,127,50,0.5))'
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              <span className="text-sm">#{person.rank}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-1">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="w-6 h-6 border border-neutral-800">
-                                <AvatarImage src={defaultAvatar} />
-                                <AvatarFallback className="bg-neutral-900 text-white text-xs">
-                                  {person.name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="text-sm font-medium text-white">{person.name}</div>
-                                <div className="text-xs text-neutral-400">@{person.username}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-white text-right font-medium text-sm py-1">{person.score}</TableCell>
-                          <TableCell className="text-neutral-400 text-right text-sm py-1">{person.commits}</TableCell>
+                      {paginatedSprints.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-neutral-500 py-8">No sprints found.</TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
                 </div>
-              )}
-            </div>
-          )}
 
-          {viewMode === "create" && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-white">Create New Sprint</h2>
-                <Button 
-                  variant="ghost"
-                  onClick={() => setViewMode("list")}
-                  className="text-neutral-400 hover:text-white h-7 text-xs px-2"
-                >
-                  ← Back
-                </Button>
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 py-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-7 text-xs px-2 bg-neutral-900 border-neutral-800 text-neutral-400 disabled:opacity-50"
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-xs text-neutral-400">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-7 text-xs px-2 bg-neutral-900 border-neutral-800 text-neutral-400 disabled:opacity-50"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </div>
-              <div className="flex gap-4">
-                <div className="flex-1 max-w-2xl">
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-white mb-3">Create New Sprint</h3>
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="sprint-name" className="text-sm text-neutral-400">Sprint Name</Label>
-                        <Input
-                          id="sprint-name"
-                          placeholder="e.g., Winter Hackathon 2026"
-                          className="bg-black border-neutral-800 text-white h-8 text-sm"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="start-date" className="text-sm text-neutral-400">Start Date</Label>
-                          <Input
-                            id="start-date"
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => {
-                              setStartDate(e.target.value);
-                              if (e.target.value && endDate) {
-                                setDateRange({
-                                  from: new Date(e.target.value),
-                                  to: new Date(endDate)
-                                });
-                              }
-                            }}
-                            className="bg-black border-neutral-800 text-white h-8 text-sm"
-                          />
+            )}
+
+            {viewMode === "participate" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-white">Sprint Details</h2>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setViewMode("list")}
+                    className="text-neutral-400 hover:text-white h-7 text-xs px-2"
+                  >
+                    ← Back
+                  </Button>
+                </div>
+
+                {selectedSprintData && (
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5">
+                    <div className="flex flex-col md:flex-row gap-6 justify-between items-start">
+                      <div className="space-y-3 flex-1">
+                        <div>
+                          <h1 className="text-2xl font-bold text-white mb-2">{selectedSprintData.name}</h1>
+                          <p className="text-neutral-400 text-sm leading-relaxed">
+                            {selectedSprintData.description || "No description provided for this sprint."}
+                          </p>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="end-date" className="text-sm text-neutral-400">End Date</Label>
-                          <Input
-                            id="end-date"
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => {
-                              setEndDate(e.target.value);
-                              if (e.target.value && startDate) {
-                                setDateRange({
-                                  from: new Date(startDate),
-                                  to: new Date(e.target.value)
-                                });
-                              }
-                            }}
-                            className="bg-black border-neutral-800 text-white h-8 text-sm"
-                          />
+                        <div className="flex flex-wrap gap-4 pt-2">
+                          <div className="flex items-center gap-2 text-sm text-neutral-300 bg-neutral-800/50 px-3 py-1.5 rounded-md border border-neutral-800">
+                            <User className="w-4 h-4 text-blue-400" />
+                            <span className="text-neutral-500">Manager:</span>
+                            <span className="font-medium">{selectedSprintData.managerName || "Unknown"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-neutral-300 bg-neutral-800/50 px-3 py-1.5 rounded-md border border-neutral-800">
+                            <Calendar className="w-4 h-4 text-green-400" />
+                            <span className="text-neutral-500">Period:</span>
+                            <span className="font-medium">
+                              {format(new Date(selectedSprintData.startDate), 'yyyy.MM.dd')} - {format(new Date(selectedSprintData.endDate), 'yyyy.MM.dd')}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="description" className="text-sm text-neutral-400">Description</Label>
-                        <textarea
-                          id="description"
-                          rows={3}
-                          placeholder="Describe your sprint..."
-                          className="w-full bg-black border border-neutral-800 rounded px-3 py-2 text-sm text-white placeholder:text-neutral-500"
-                        />
+                      <div className="flex flex-col items-end gap-3 min-w-[150px]">
+                        <Badge className={`${selectedSprintData.status === 'active' || selectedSprintData.isOpen
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                          : 'bg-neutral-800 text-neutral-400 border-neutral-700'
+                          } px-3 py-1 text-sm capitalize`}>
+                          {selectedSprintData.status || (selectedSprintData.isOpen ? 'Active' : 'Completed')}
+                        </Badge>
+                        <div className="text-xs text-neutral-500 text-right space-y-1">
+                          <div><span className="text-white font-semibold">{selectedSprintData.teamsCount || 0}</span> Teams</div>
+                          <div><span className="text-white font-semibold">{selectedSprintData.participantsCount || 0}</span> Participants</div>
+                        </div>
                       </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-sm px-3">
-                          Cancel
-                        </Button>
-                        <Button className="bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-sm px-3">
-                          Create Sprint
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                  {/* Left - Sprint Selection & Repository */}
+                  <div className="lg:col-span-2 space-y-2">
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
+                      <h3 className="text-sm font-medium text-white mb-2">Select Sprint</h3>
+                      <Select onValueChange={(value) => setSelectedSprint(value)}>
+                        <SelectTrigger className="bg-black border-neutral-800 text-white h-8 text-sm">
+                          <SelectValue placeholder="Choose a sprint to participate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-neutral-900 border-neutral-800">
+                          {sprints.filter(s => s.status === 'active' || s.isOpen).map((sprint) => (
+                            <SelectItem key={sprint.id} value={String(sprint.id)} className="text-white text-sm">
+                              {sprint.name}
+                            </SelectItem>
+                          ))}
+                          {sprints.length === 0 && !loadingSprints && (
+                            <div className="p-2 text-xs text-neutral-500 text-center">No active sprints found</div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
+                      <h3 className="text-sm font-medium text-white mb-2">Register Repositories</h3>
+                      <div className="space-y-2 mb-3">
+                        {myRepositories.map((repo) => (
+                          <div
+                            key={repo.id}
+                            onClick={() => toggleRepo(repo.id)}
+                            className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${selectedRepos.includes(repo.id)
+                              ? 'border-blue-500 bg-blue-500/10'
+                              : 'border-neutral-800 hover:bg-neutral-800'
+                              }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <GitBranch className="w-4 h-4 text-neutral-400" />
+                              <span className="text-sm text-white">{repo.name}</span>
+                            </div>
+                            {selectedRepos.includes(repo.id) && (
+                              <Badge className="bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-2">
+                                Selected
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
+                        <h3 className="text-sm font-medium text-white mb-2">Team Information</h3>
+                        <div className="space-y-2">
+                          <Label className="text-sm text-neutral-400">Team ID</Label>
+                          <Input
+                            placeholder="Enter Team ID to join with..."
+                            value={teamIdInput}
+                            onChange={(e) => setTeamIdInput(e.target.value)}
+                            className="bg-black border-neutral-800 text-white h-8 text-sm"
+                          />
+                          <p className="text-xs text-neutral-500">
+                            * You must provide a Team ID to register.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-sm"
+                        onClick={onRegisterSprint}
+                      >
+                        Register for Sprint
+                      </Button>
+                    </div>
+
+                    {/* Team Members */}
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
+                      <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
+                        <h3 className="text-sm font-medium text-white">Team Members</h3>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Member</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Role</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Contribution</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {teamMembers.map((member) => (
+                            <TableRow key={member.username} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                              <TableCell className="py-1">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-6 h-6 border border-neutral-800">
+                                    <AvatarImage src={defaultAvatar} />
+                                    <AvatarFallback className="bg-neutral-900 text-white text-xs">
+                                      {member.name.split(' ').map(n => n[0]).join('')}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="text-sm font-medium text-white">{member.name}</div>
+                                    <div className="text-xs text-neutral-400">@{member.username}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-neutral-400 py-1">{member.role}</TableCell>
+                              <TableCell className="text-sm text-white text-right py-1">{member.commits}</TableCell>
+                              <TableCell className="py-1">
+                                <div className="flex items-center gap-1.5">
+                                  <Progress value={member.contribution} className="flex-1 h-1.5" />
+                                  <span className="text-xs text-neutral-400 min-w-[35px]">{member.contribution}%</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {viewMode === "ranking" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-white">Sprint Rankings</h2>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setViewMode("list")}
+                    className="text-neutral-400 hover:text-white h-7 text-xs px-2"
+                  >
+                    ← Back
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select defaultValue="1">
+                    <SelectTrigger className="w-64 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-neutral-900 border-neutral-800">
+                      {sprints.map((sprint) => (
+                        <SelectItem key={sprint.id} value={String(sprint.id)} className="text-white text-sm">
+                          {sprint.name}
+                        </SelectItem>
+                      ))}
+                      {sprints.length === 0 && !loadingSprints && (
+                        <div className="p-2 text-xs text-neutral-500 text-center">No sprints available</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Select value={rankingViewType} onValueChange={(value) => setRankingViewType(value as "individual" | "team")}>
+                    <SelectTrigger className="w-32 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-neutral-900 border-neutral-800">
+                      <SelectItem value="individual" className="text-white focus:bg-neutral-800 text-sm">Individual</SelectItem>
+                      <SelectItem value="team" className="text-white focus:bg-neutral-800 text-sm">Team</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Team Ranking */}
+                {rankingViewType === "team" && (
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
+                    <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-white">Team Leaderboard</h3>
+                        <span className="text-xs text-neutral-400">Updated recently</span>
+                      </div>
+                    </div>
+                    {loadingRankings ? (
+                      <div className="p-8 text-center text-neutral-500">Loading rankings...</div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                            <TableHead className="text-neutral-400 font-medium text-xs w-12 h-7 py-1">Rank</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Team</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Score</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Commits</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Members</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sprintRankings.length === 0 ? (
+                            <TableRow className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                              <TableCell colSpan={5} className="text-center text-neutral-500 py-4">
+                                No team rankings available yet.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            sprintRankings.map((item) => (
+                              <TableRow key={item.rank} className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8">
+                                <TableCell className="font-medium text-white text-sm py-1">
+                                  <div className="flex items-center gap-1">
+                                    {item.rank <= 3 && (
+                                      <div
+                                        className="relative w-4 h-4 flex items-center justify-center"
+                                        style={{
+                                          background: item.rank === 1
+                                            ? 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))'
+                                            : item.rank === 2
+                                              ? 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))'
+                                              : 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(160,82,45,0.15))',
+                                          backdropFilter: 'blur(8px)',
+                                          borderRadius: '50%',
+                                        }}
+                                      >
+                                        <FaTrophy
+                                          className="w-3 h-3 relative z-10"
+                                          style={{
+                                            color: item.rank === 1 ? '#FFD700' : item.rank === 2 ? '#C0C0C0' : '#CD7F32',
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+                                    <span className={cn("inline-block w-4 text-center", item.rank <= 3 ? "text-yellow-500 font-bold" : "text-neutral-400")}>
+                                      {item.rank}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell text-sm py-1>
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-sm font-medium text-white">{item.team?.name || 'Unknown Team'}</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-white text-sm py-1">{item.team?.score || 0}</TableCell>
+                                <TableCell className="text-right text-neutral-400 text-sm py-1">{item.team?.commits || 0}</TableCell>
+                                <TableCell className="text-right text-neutral-400 text-sm py-1 px-4">{item.team?.members || 0}</TableCell>
+                              </TableRow>
+                            )))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                )}
+
+                {/* Individual Ranking */}
+                {rankingViewType === "individual" && (
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
+                    <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-white">Individual Leaderboard</h3>
+                        <span className="text-xs text-neutral-400">Updated recently</span>
+                      </div>
+                    </div>
+                    {loadingRankings ? (
+                      <div className="p-8 text-center text-neutral-500">Loading rankings...</div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                            <TableHead className="text-neutral-400 font-medium text-xs w-12 h-7 py-1">Rank</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">User</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Score</TableHead>
+                            <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Commits</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sprintRankings.length === 0 ? (
+                            <TableRow className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                              <TableCell colSpan={4} className="text-center text-neutral-500 py-4">
+                                No individual rankings available yet.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            sprintRankings.map((item) => (
+                              <TableRow key={item.rank} className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8">
+                                <TableCell className="font-medium text-white text-sm py-1">
+                                  <span className={cn("inline-block w-4 text-center ml-5", item.rank <= 3 ? "text-yellow-500 font-bold" : "text-neutral-400")}>
+                                    {item.rank}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-sm py-1">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="w-5 h-5 border border-neutral-800">
+                                      <AvatarImage src={item.user?.profileUrl || defaultAvatar} />
+                                      <AvatarFallback className="bg-neutral-900 text-white text-[10px]">
+                                        {item.user?.username?.substring(0, 2).toUpperCase() || "??"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="text-sm font-medium text-white">{item.user?.username || 'Unknown'}</div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-white text-sm py-1">{item.user?.score || 0}</TableCell>
+                                <TableCell className="text-right text-neutral-400 text-sm py-1">{item.user?.commits || 0}</TableCell>
+                              </TableRow>
+                            )))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {
+              viewMode === "create" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-white">Create New Sprint</h2>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setViewMode("list")}
+                      className="text-neutral-400 hover:text-white h-7 text-xs px-2"
+                    >
+                      ← Back
+                    </Button>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1 max-w-2xl">
+                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+                        <h3 className="text-sm font-medium text-white mb-3">Create New Sprint</h3>
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="sprint-name" className="text-sm text-neutral-400">Sprint Name</Label>
+                            <Input
+                              id="sprint-name"
+                              placeholder="e.g., Winter Hackathon 2026"
+                              value={createForm.name}
+                              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                              className="bg-black border-neutral-800 text-white h-8 text-sm"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="start-date" className="text-sm text-neutral-400">Start Date</Label>
+                              <Input
+                                id="start-date"
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => {
+                                  setStartDate(e.target.value);
+                                  if (e.target.value && endDate) {
+                                    setDateRange({
+                                      from: new Date(e.target.value),
+                                      to: new Date(endDate)
+                                    });
+                                  }
+                                }}
+                                className="bg-black border-neutral-800 text-white h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="end-date" className="text-sm text-neutral-400">End Date</Label>
+                              <Input
+                                id="end-date"
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => {
+                                  setEndDate(e.target.value);
+                                  if (e.target.value && startDate) {
+                                    setDateRange({
+                                      from: new Date(startDate),
+                                      to: new Date(e.target.value)
+                                    });
+                                  }
+                                }}
+                                className="bg-black border-neutral-800 text-white h-8 text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="description" className="text-sm text-neutral-400">Description</Label>
+                            <textarea
+                              id="description"
+                              rows={3}
+                              placeholder="Describe your sprint..."
+                              value={createForm.description}
+                              onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                              className="w-full bg-black border border-neutral-800 rounded px-3 py-2 text-sm text-white placeholder:text-neutral-500"
+                            />
+
+                          </div>
+                          <div className="flex items-center justify-between py-2">
+                            <div>
+                              <Label className="text-sm text-white font-medium">Public Sprint</Label>
+                              <p className="text-xs text-neutral-400">Make this sprint visible to everyone.</p>
+                            </div>
+                            <Switch
+                              checked={createForm.isPublic}
+                              onCheckedChange={(checked) => setCreateForm({ ...createForm, isPublic: checked })}
+                              className="bg-neutral-800 data-[state=checked]:bg-blue-600"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-sm px-3">
+                              Cancel
+                            </Button>
+                            <Button
+                              className="bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-sm px-3"
+                              onClick={onCreateSprint}
+                            >
+                              Create Sprint
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <CalendarWithRangePresets
+                        dateRange={dateRange}
+                        setDateRange={setDateRange}
+                        month={month}
+                        setMonth={setMonth}
+                        setStartDate={setStartDate}
+                        setEndDate={setEndDate}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
+            {viewMode === "manage" && selectedSprintData && (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Manage Sprint</h2>
+                    <p className="text-sm text-neutral-400">{selectedSprintData.name}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setViewMode("list")}
+                    className="text-neutral-400 hover:text-white h-8 px-3"
+                  >
+                    ← Back to List
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left: Settings */}
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 shadow-xl space-y-6">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Search className="w-5 h-5 text-blue-500" />
+                        General Settings
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm text-neutral-400">Sprint Name</Label>
+                          <Input
+                            value={createForm.name}
+                            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                            className="bg-black border-neutral-800 text-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm text-neutral-400">Description</Label>
+                          <textarea
+                            value={createForm.description}
+                            onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                            className="w-full bg-black border border-neutral-800 rounded-md p-3 text-white text-sm min-h-[100px]"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm text-neutral-400">Start Date</Label>
+                            <Input
+                              type="date"
+                              value={startDate}
+                              onChange={(e) => setStartDate(e.target.value)}
+                              className="bg-black border-neutral-800 text-white"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm text-neutral-400">End Date</Label>
+                            <Input
+                              type="date"
+                              value={endDate}
+                              onChange={(e) => setEndDate(e.target.value)}
+                              className="bg-black border-neutral-800 text-white"
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-6"
+                          onClick={onUpdateSprint}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? "Updating..." : "Update Sprint Details"}
                         </Button>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex-shrink-0">
-                  <CalendarWithRangePresets
-                    dateRange={dateRange}
-                    setDateRange={setDateRange}
-                    month={month}
-                    setMonth={setMonth}
-                    setStartDate={setStartDate}
-                    setEndDate={setEndDate}
-                  />
+
+                  {/* Right: Team Management */}
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
+                    <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <FaTrophy className="w-5 h-5 text-yellow-500" />
+                        Registered Teams
+                      </h3>
+                      <Badge variant="outline" className="text-neutral-400 border-neutral-800">
+                        {sprintRankings.length} Teams
+                      </Badge>
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-[500px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 hover:bg-transparent">
+                            <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
+                            <TableHead className="text-neutral-500 font-medium text-right">Score</TableHead>
+                            <TableHead className="text-neutral-500 font-medium text-center w-24">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sprintRankings.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-12 text-neutral-500">
+                                No teams registered in this sprint.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            sprintRankings.map((item) => item.team && (
+                              <TableRow key={item.team.teamId} className="border-neutral-800 hover:bg-white/5 transition-colors">
+                                <TableCell className="font-medium text-white p-4">
+                                  {item.team.name}
+                                </TableCell>
+                                <TableCell className="text-right text-blue-400 font-mono p-4">
+                                  {item.team.score.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  <div className="flex justify-center">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBanTeam(item.team!.teamId)}
+                                      className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                    >
+                                      Ban
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  {/* Pending Registrations */}
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col lg:col-span-2">
+                    <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-purple-500" />
+                        Pending Registrations
+                      </h3>
+                      <Badge variant="outline" className="text-neutral-400 border-neutral-800">
+                        {registrations.filter(r => r.status === 'PENDING').length} Pending
+                      </Badge>
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-[400px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 hover:bg-transparent">
+                            <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
+                            <TableHead className="text-neutral-500 font-medium">Repository</TableHead>
+                            <TableHead className="text-neutral-500 font-medium">Status</TableHead>
+                            <TableHead className="text-neutral-500 font-medium text-center">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {registrations.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-12 text-neutral-500">
+                                No registration records found.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            registrations.map((reg) => (
+                              <TableRow key={`${reg.teamId}-${reg.repoId}`} className="border-neutral-800 hover:bg-white/5 transition-colors">
+                                <TableCell className="font-medium text-white p-4">
+                                  {reg.teamName}
+                                </TableCell>
+                                <TableCell className="text-neutral-400 p-4">
+                                  {reg.repoId}
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  <Badge className={
+                                    reg.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                      reg.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                        reg.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                          'bg-neutral-800 text-neutral-500'
+                                  }>
+                                    {reg.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  <div className="flex justify-center gap-2">
+                                    {reg.status === 'PENDING' && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleApproveTeamResult(reg.teamId, true)}
+                                          className="text-green-500 hover:text-green-400 hover:bg-green-500/10 h-8 px-3"
+                                        >
+                                          Approve
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleApproveTeamResult(reg.teamId, false)}
+                                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                        >
+                                          Reject
+                                        </Button>
+                                      </>
+                                    )}
+                                    {reg.status === 'APPROVED' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleBanTeam(reg.teamId)}
+                                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                      >
+                                        Ban
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          </div>
-        </div>
-      </div>
-    </DashboardLayout>
+            )}
+          </div >
+        </div >
+      </div >
+    </DashboardLayout >
   );
 }

@@ -7,7 +7,7 @@ import ClaudeChatInput from "@/app/components/ui/claude-chat-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/app/components/ui/popover";
 import { cn } from "@/app/components/ui/utils";
 import { GitBranch, ChevronDown, Loader2 } from "lucide-react";
-import { getUserRepositories, getRepositoryBranches, type Repository, type Branch } from "@/lib/api";
+import { getUserRepositories, getRepositoryBranches, syncRepository, type Repository, type Branch } from "@/lib/api";
 
 export function RepositoryPage() {
   const navigate = useNavigate();
@@ -64,6 +64,10 @@ export function RepositoryPage() {
     try {
       const branches = await getRepositoryBranches(owner, repo);
       setAvailableBranches(branches);
+
+      // Trigger background sync
+      syncRepository(owner, repo).catch(err => console.error("Background sync failed", err));
+
       // Auto-select main branch if available
       if (branches.length > 0 && !selectedBranch) {
         const mainBranch = branches.find(b => b.name === 'main') || branches[0];
@@ -89,11 +93,11 @@ export function RepositoryPage() {
       selectedRepo: selectedRepoData,
       selectedBranch
     });
-    
+
     if (selectedRepoData && selectedBranch) {
       const owner = selectedRepoData.owner;
       const repo = selectedRepoData.name;
-      
+
       // URLSearchParams를 사용하여 안전하게 URL 생성 (한글 인코딩 문제 해결)
       // 각 파라미터를 개별적으로 인코딩하여 안전하게 처리
       const params = new URLSearchParams();
@@ -101,7 +105,7 @@ export function RepositoryPage() {
       params.set('repo', repo);
       params.set('branch', selectedBranch);
       params.set('question', data.message); // URLSearchParams가 자동으로 인코딩
-      
+
       const url = `/commits?${params.toString()}`;
       console.log('RepositoryPage - Navigating to:', url);
       console.log('RepositoryPage - Question (original):', data.message);
@@ -109,7 +113,7 @@ export function RepositoryPage() {
       console.log('RepositoryPage - Question (chars):', data.message.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', '));
       console.log('RepositoryPage - Question (encoded in URL):', params.get('question'));
       console.log('RepositoryPage - Full URL:', url);
-      
+
       // navigate 대신 window.location을 사용하여 URL이 정확히 전달되도록 함
       navigate(url);
     } else {
@@ -170,7 +174,7 @@ export function RepositoryPage() {
                       <ChevronDown className="w-3 h-3" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent 
+                  <PopoverContent
                     className="w-80 bg-neutral-900 border-neutral-800 p-2"
                     align="start"
                     side="bottom"
@@ -215,8 +219,8 @@ export function RepositoryPage() {
                 </Popover>
 
                 {/* Branch Selection Button */}
-                <Popover 
-                  open={branchPopoverOpen} 
+                <Popover
+                  open={branchPopoverOpen}
                   onOpenChange={setBranchPopoverOpen}
                 >
                   <PopoverTrigger asChild>
@@ -236,7 +240,7 @@ export function RepositoryPage() {
                       <ChevronDown className="w-3 h-3" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent 
+                  <PopoverContent
                     className="w-72 bg-neutral-900 border-neutral-800 p-2"
                     align="start"
                     side="bottom"

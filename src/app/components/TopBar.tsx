@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Menu, User, Settings, LogOut, CreditCard, Keyboard, Users, UserPlus, Mail, MessageSquare, PlusCircle, Plus, Github, LifeBuoy, Cloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
@@ -17,6 +17,8 @@ import {
   DropdownMenuShortcut,
 } from "@/app/components/ui/dropdown-menu";
 import { ActivityDropdown } from "@/app/components/ui/activity-dropdown";
+import { type UserResponse } from "@/lib/api";
+import { useUser } from "@/app/contexts/UserContext";
 import githubAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 interface TopBarProps {
@@ -27,9 +29,21 @@ interface TopBarProps {
 export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, loading: isLoading, logout } = useUser();
 
-  const handleLogout = () => {
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (err) {
+      console.error("Logout failed", err);
+      // Fallback is handled in context or here
+      try {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      } catch (e) { }
+      navigate('/');
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -43,7 +57,7 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
     <div className="h-16 relative">
       {/* Glass background */}
       <div className="absolute inset-0 bg-[#010409]/80 backdrop-blur-2xl border-b border-white/5"></div>
-      
+
       <div className="relative h-full flex items-center justify-between px-6">
         {/* Left side - Menu button and Search */}
         <div className="flex items-center gap-3 flex-1 max-w-xl">
@@ -75,13 +89,23 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10 cursor-pointer">
-                <Avatar className="w-7 h-7 border border-white/10">
-                  <AvatarImage src={githubAvatar} />
-                  <AvatarFallback className="bg-gradient-to-br from-[#7aa2f7]/20 to-[#bb9af7]/20 text-white text-xs">JD</AvatarFallback>
+                <Avatar className="w-7 h-7 border border-white/10 ring-1 ring-white/5 shadow-inner">
+                  <AvatarImage src={user?.profileUrl || ''} />
+                  <AvatarFallback className="bg-neutral-800 text-white text-[10px] font-bold">
+                    {user?.username ? user.username.substring(0, 2).toUpperCase() : (isLoading ? "..." : "??")}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-white">John Doe</p>
-                  <p className="text-xs text-[#7d8590]">@johndoe</p>
+                  {isLoading ? (
+                    <div className="w-20 h-3 bg-white/10 rounded animate-pulse mb-1"></div>
+                  ) : (
+                    <p className="text-sm font-medium text-white leading-none mb-0.5">
+                      {user?.username || "Guest"}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-[#7d8590] leading-none">
+                    {isLoading ? "Loading profile..." : (user?.company || user?.location || user?.email || "")}
+                  </p>
                 </div>
               </div>
             </DropdownMenuTrigger>
@@ -91,15 +115,11 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
               <DropdownMenuGroup>
                 <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
                   <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                  <span>Profile & Setting</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-white focus:bg-neutral-800">
                   <CreditCard className="mr-2 h-4 w-4" />
                   <span>Billing</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-white focus:bg-neutral-800">
                   <Keyboard className="mr-2 h-4 w-4" />
@@ -108,7 +128,7 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator className="bg-neutral-800" />
               <DropdownMenuGroup>
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                <DropdownMenuItem onClick={() => navigate('/teams')} className="text-white focus:bg-neutral-800">
                   <Users className="mr-2 h-4 w-4" />
                   <span>Team</span>
                 </DropdownMenuItem>
@@ -135,13 +155,13 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
+                <DropdownMenuItem onClick={() => navigate('/teams')} className="text-white focus:bg-neutral-800">
                   <Plus className="mr-2 h-4 w-4" />
                   <span>New Team</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator className="bg-neutral-800" />
-              <DropdownMenuItem className="text-white focus:bg-neutral-800">
+              <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
                 <Github className="mr-2 h-4 w-4" />
                 <span>GitHub</span>
               </DropdownMenuItem>
