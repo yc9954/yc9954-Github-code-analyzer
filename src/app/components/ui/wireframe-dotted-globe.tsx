@@ -65,9 +65,9 @@ export default function RotatingEarth({
     // Initial scale: 1.4x for more zoomed in view
     const projection = d3
       .geoOrthographic()
-      .scale(radius * 1.6) // More zoomed in (slightly increased from 1.3)
+      .scale(radius * 1.4) // Increased from 1.6 to 1.8 for larger globe
       .translate([containerWidth / 2, containerHeight / 2])
-      .rotate([-30, -20]) // Initial rotation: -30 degrees longitude, -20 degrees latitude (reversed)
+      .rotate([-30, -35]) // Initial rotation: -30 degrees longitude, -20 degrees latitude (reversed)
       .clipAngle(90);
 
     // Store projection and dimensions for click detection

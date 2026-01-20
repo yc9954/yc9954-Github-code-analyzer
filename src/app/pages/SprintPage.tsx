@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
+import { getSprints, getMySprints, getSprintRankings, type Sprint, type SprintRanking } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -315,6 +316,10 @@ export function SprintPage() {
   const [selectedRepos, setSelectedRepos] = useState<number[]>([]);
   const [expandedCommits, setExpandedCommits] = useState<string[]>([]);
   const [aiOpen, setAiOpen] = useState(false);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [sprintRankings, setSprintRankings] = useState<SprintRanking[]>([]);
+  const [loadingSprints, setLoadingSprints] = useState(false);
+  const [loadingRankings, setLoadingRankings] = useState(false);
 
   const toggleCommit = (sha: string) => {
     setExpandedCommits(prev => 
@@ -341,6 +346,53 @@ export function SprintPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(last7Days);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Load sprints from API
+  useEffect(() => {
+    const loadSprints = async () => {
+      setLoadingSprints(true);
+      try {
+        const data = await getSprints();
+        setSprints(data);
+      } catch (error) {
+        console.error('Error loading sprints:', error);
+        // Fallback to mock data if API fails
+        setSprints(allSprints.map((s, idx) => ({
+          id: s.id.toString(),
+          name: s.name,
+          startDate: new Date().toISOString(),
+          endDate: new Date().toISOString(),
+          isPrivate: false,
+          isOpen: true,
+          teamsCount: s.teams,
+          participantsCount: s.participants,
+          status: s.status,
+        })));
+      } finally {
+        setLoadingSprints(false);
+      }
+    };
+    loadSprints();
+  }, []);
+
+  // Load sprint rankings when a sprint is selected
+  useEffect(() => {
+    if (selectedSprint && viewMode === 'ranking') {
+      const loadRankings = async () => {
+        setLoadingRankings(true);
+        try {
+          const sprintId = sprints.find(s => s.id === selectedSprint.toString())?.id || selectedSprint.toString();
+          const data = await getSprintRankings(sprintId, rankingViewType === 'team' ? 'TEAM' : 'INDIVIDUAL');
+          setSprintRankings(data);
+        } catch (error) {
+          console.error('Error loading sprint rankings:', error);
+        } finally {
+          setLoadingRankings(false);
+        }
+      };
+      loadRankings();
+    }
+  }, [selectedSprint, viewMode, rankingViewType, sprints]);
 
   // Check URL query parameter for ranking view
   useEffect(() => {

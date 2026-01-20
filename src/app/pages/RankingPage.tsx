@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
+import { getUserRankings, getCommitRankings, type UserRank, type CommitRank } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
 import { FaTrophy } from "react-icons/fa";
@@ -27,6 +28,36 @@ const teamRanking = [
 
 export function RankingPage() {
   const [viewType, setViewType] = useState<"individual" | "team">("individual");
+  const [userRankings, setUserRankings] = useState<UserRank[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load rankings from API
+  useEffect(() => {
+    const loadRankings = async () => {
+      setLoading(true);
+      try {
+        if (viewType === 'individual') {
+          const data = await getUserRankings('GLOBAL', undefined, 'ALL', 10);
+          setUserRankings(data);
+        }
+        // Team rankings would need a different API call
+      } catch (error) {
+        console.error('Error loading rankings:', error);
+        // Fallback to mock data if API fails
+        if (viewType === 'individual') {
+          setUserRankings(individualRanking.map((r, idx) => ({
+            rank: r.rank,
+            username: r.username,
+            profileUrl: defaultAvatar,
+            totalScore: r.score,
+          })));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadRankings();
+  }, [viewType]);
 
   return (
     <DashboardLayout>

@@ -8,7 +8,7 @@ import { GitBranch, MessageSquare, Send, Copy, CheckCircle2, Github, GitCommit, 
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Badge } from "@/app/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
-import { getRepositoryCommits, getRepositoryBranches, getUserRepositories, sendChatMessage, type Commit, type Repository, type Branch, type ChatMessage } from "@/lib/api";
+import { getRepositoryCommits, getRepositoryBranches, getUserRepositories, sendChatMessage, getCommitAnalysis, type Commit, type Repository, type Branch, type ChatMessage } from "@/lib/api";
 import githubAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 // Repository Analysis Data
@@ -154,7 +154,9 @@ export function CommitsPage() {
       const response = await sendChatMessage(
         chatMessages,
         commits,
-        selectedCommit || undefined
+        selectedCommit || undefined,
+        owner,
+        repoName
       );
       
       setChatMessages(prev => [...prev, { 
@@ -166,7 +168,7 @@ export function CommitsPage() {
       const errorMessage = error?.message || "알 수 없는 오류가 발생했습니다.";
       setChatMessages(prev => [...prev, { 
         role: "assistant", 
-        content: `오류: ${errorMessage}\n\n서버가 실행 중인지, 그리고 OpenAI API 키가 설정되어 있는지 확인해주세요.`
+        content: `오류: ${errorMessage}\n\n인증 토큰이 설정되어 있는지 확인해주세요.`
       }]);
     } finally {
       setIsLoadingChat(false);
@@ -265,7 +267,9 @@ export function CommitsPage() {
         const response = await sendChatMessage(
           updatedMessages,
           commits,
-          selectedCommit || undefined
+          selectedCommit || undefined,
+          owner,
+          repoName
         );
         
         setChatMessages(prev => [...prev, { 
@@ -277,7 +281,7 @@ export function CommitsPage() {
         const errorMessage = error?.message || "알 수 없는 오류가 발생했습니다.";
         setChatMessages(prev => [...prev, { 
           role: "assistant", 
-          content: `오류: ${errorMessage}\n\n서버가 실행 중인지, 그리고 OpenAI API 키가 설정되어 있는지 확인해주세요.`
+          content: `오류: ${errorMessage}\n\n인증 토큰이 설정되어 있는지 확인해주세요.`
         }]);
       } finally {
         setIsLoadingChat(false);
