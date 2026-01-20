@@ -97,54 +97,25 @@ const CalendarWithRangePresets = ({
 }: CalendarWithRangePresetsProps) => {
   const today = new Date();
 
-  const yesterday = {
-    from: subDays(today, 1),
-    to: subDays(today, 1)
-  };
-
+  // Future Presets Only
   const tomorrow = {
-    from: today,
+    from: addDays(today, 1),
     to: addDays(today, 1)
   };
 
-  const last7Days = {
-    from: subDays(today, 6),
-    to: today
-  };
-
   const next7Days = {
-    from: addDays(today, 1),
-    to: addDays(today, 7)
+    from: today,
+    to: addDays(today, 6)
   };
 
-  const last30Days = {
-    from: subDays(today, 29),
-    to: today
-  };
-
-  const monthToDate = {
-    from: startOfMonth(today),
-    to: today
-  };
-
-  const lastMonth = {
-    from: startOfMonth(subMonths(today, 1)),
-    to: endOfMonth(subMonths(today, 1))
+  const next14Days = {
+    from: today,
+    to: addDays(today, 13)
   };
 
   const nextMonth = {
     from: startOfMonth(addMonths(today, 1)),
     to: endOfMonth(addMonths(today, 1))
-  };
-
-  const yearToDate = {
-    from: startOfYear(today),
-    to: today
-  };
-
-  const lastYear = {
-    from: startOfYear(subYears(today, 1)),
-    to: endOfYear(subYears(today, 1))
   };
 
   const handleDateSelect = (newDate: DateRange | undefined) => {
@@ -163,9 +134,13 @@ const CalendarWithRangePresets = ({
 
   const handlePresetClick = (preset: DateRange) => {
     setDateRange(preset);
-    setMonth(preset.to);
-    setStartDate(format(preset.from, 'yyyy-MM-dd'));
-    setEndDate(format(preset.to, 'yyyy-MM-dd'));
+    if (preset.from) {
+      setMonth(preset.from); // Set month to start of preset
+      setStartDate(format(preset.from, 'yyyy-MM-dd'));
+    }
+    if (preset.to) {
+      setEndDate(format(preset.to, 'yyyy-MM-dd'));
+    }
   };
 
   return (
@@ -179,6 +154,7 @@ const CalendarWithRangePresets = ({
             month={month}
             onMonthChange={setMonth}
             numberOfMonths={1}
+            disabled={{ before: today }} // Disable past dates
             className='w-full bg-transparent p-0 text-white'
             classNames={{
               months: "flex flex-col sm:flex-row gap-2",
@@ -228,26 +204,10 @@ const CalendarWithRangePresets = ({
           <Button
             variant='outline'
             size='sm'
-            onClick={() => handlePresetClick(yesterday)}
-            className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
-          >
-            Yesterday
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
             onClick={() => handlePresetClick(tomorrow)}
             className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
           >
             Tomorrow
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handlePresetClick(last7Days)}
-            className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
-          >
-            Last 7 days
           </Button>
           <Button
             variant='outline'
@@ -260,26 +220,10 @@ const CalendarWithRangePresets = ({
           <Button
             variant='outline'
             size='sm'
-            onClick={() => handlePresetClick(last30Days)}
+            onClick={() => handlePresetClick(next14Days)}
             className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
           >
-            Last 30 days
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handlePresetClick(monthToDate)}
-            className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
-          >
-            Month to date
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handlePresetClick(lastMonth)}
-            className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
-          >
-            Last month
+            Next 14 days
           </Button>
           <Button
             variant='outline'
@@ -288,22 +232,6 @@ const CalendarWithRangePresets = ({
             className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
           >
             Next month
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handlePresetClick(yearToDate)}
-            className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
-          >
-            Year to date
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handlePresetClick(lastYear)}
-            className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 text-xs"
-          >
-            Last year
           </Button>
         </CardFooter>
       </Card>
@@ -1293,182 +1221,183 @@ export function SprintPage() {
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm text-neutral-400">Start Date</Label>
-                            <Input
-                              type="date"
-                              value={startDate}
-                              onChange={(e) => setStartDate(e.target.value)}
-                              className="bg-black border-neutral-800 text-white"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-neutral-400">End Date</Label>
-                            <Input
-                              type="date"
-                              value={endDate}
-                              onChange={(e) => setEndDate(e.target.value)}
-                              className="bg-black border-neutral-800 text-white"
-                            />
-                          </div>
+                          <Label className="text-sm text-neutral-400">Start Date</Label>
+                          <Input
+                            type="date"
+                            min={new Date().toISOString().split('T')[0]} // Future dates only
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="bg-black border-neutral-800 text-white"
+                          />
                         </div>
-                        <Button
-                          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-6"
-                          onClick={onUpdateSprint}
-                          disabled={isUpdating}
-                        >
-                          {isUpdating ? "Updating..." : "Update Sprint Details"}
-                        </Button>
+                        <div className="space-y-2">
+                          <Label className="text-sm text-neutral-400">End Date</Label>
+                          <Input
+                            type="date"
+                            min={new Date().toISOString().split('T')[0]} // Future dates only
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-black border-neutral-800 text-white"
+                          />
+                        </div>
                       </div>
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-6"
+                        onClick={onUpdateSprint}
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? "Updating..." : "Update Sprint Details"}
+                      </Button>
                     </div>
                   </div>
+                </div>
 
-                  {/* Right: Team Management */}
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
-                    <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <FaTrophy className="w-5 h-5 text-yellow-500" />
-                        Registered Teams
-                      </h3>
-                      <Badge variant="outline" className="text-neutral-400 border-neutral-800">
-                        {sprintRankings.length} Teams
-                      </Badge>
-                    </div>
-                    <div className="flex-1 overflow-y-auto max-h-[500px]">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-neutral-800 hover:bg-transparent">
-                            <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
-                            <TableHead className="text-neutral-500 font-medium text-right">Score</TableHead>
-                            <TableHead className="text-neutral-500 font-medium text-center w-24">Actions</TableHead>
+                {/* Right: Team Management */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
+                  <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <FaTrophy className="w-5 h-5 text-yellow-500" />
+                      Registered Teams
+                    </h3>
+                    <Badge variant="outline" className="text-neutral-400 border-neutral-800">
+                      {sprintRankings.length} Teams
+                    </Badge>
+                  </div>
+                  <div className="flex-1 overflow-y-auto max-h-[500px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-neutral-800 hover:bg-transparent">
+                          <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
+                          <TableHead className="text-neutral-500 font-medium text-right">Score</TableHead>
+                          <TableHead className="text-neutral-500 font-medium text-center w-24">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sprintRankings.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-12 text-neutral-500">
+                              No teams registered in this sprint.
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {sprintRankings.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-center py-12 text-neutral-500">
-                                No teams registered in this sprint.
+                        ) : (
+                          sprintRankings.map((item) => item.team && (
+                            <TableRow key={item.team.teamId} className="border-neutral-800 hover:bg-white/5 transition-colors">
+                              <TableCell className="font-medium text-white p-4">
+                                {item.team.name}
+                              </TableCell>
+                              <TableCell className="text-right text-blue-400 font-mono p-4">
+                                {item.team.score.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="p-4">
+                                <div className="flex justify-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleBanTeam(item.team!.teamId)}
+                                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                  >
+                                    Ban
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
-                          ) : (
-                            sprintRankings.map((item) => item.team && (
-                              <TableRow key={item.team.teamId} className="border-neutral-800 hover:bg-white/5 transition-colors">
-                                <TableCell className="font-medium text-white p-4">
-                                  {item.team.name}
-                                </TableCell>
-                                <TableCell className="text-right text-blue-400 font-mono p-4">
-                                  {item.team.score.toLocaleString()}
-                                </TableCell>
-                                <TableCell className="p-4">
-                                  <div className="flex justify-center">
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Pending Registrations */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col lg:col-span-2">
+                  <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-purple-500" />
+                      Pending Registrations
+                    </h3>
+                    <Badge variant="outline" className="text-neutral-400 border-neutral-800">
+                      {registrations.filter(r => r.status === 'PENDING').length} Pending
+                    </Badge>
+                  </div>
+                  <div className="flex-1 overflow-y-auto max-h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-neutral-800 hover:bg-transparent">
+                          <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
+                          <TableHead className="text-neutral-500 font-medium">Repository</TableHead>
+                          <TableHead className="text-neutral-500 font-medium">Status</TableHead>
+                          <TableHead className="text-neutral-500 font-medium text-center">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {registrations.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-12 text-neutral-500">
+                              No registration records found.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          registrations.map((reg) => (
+                            <TableRow key={`${reg.teamId}-${reg.repoId}`} className="border-neutral-800 hover:bg-white/5 transition-colors">
+                              <TableCell className="font-medium text-white p-4">
+                                {reg.teamName}
+                              </TableCell>
+                              <TableCell className="text-neutral-400 p-4">
+                                {reg.repoId}
+                              </TableCell>
+                              <TableCell className="p-4">
+                                <Badge className={
+                                  reg.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                    reg.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                      reg.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                        'bg-neutral-800 text-neutral-500'
+                                }>
+                                  {reg.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="p-4">
+                                <div className="flex justify-center gap-2">
+                                  {reg.status === 'PENDING' && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleApproveTeamResult(reg.teamId, true)}
+                                        className="text-green-500 hover:text-green-400 hover:bg-green-500/10 h-8 px-3"
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleApproveTeamResult(reg.teamId, false)}
+                                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                  {reg.status === 'APPROVED' && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleBanTeam(item.team!.teamId)}
+                                      onClick={() => handleBanTeam(reg.teamId)}
                                       className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
                                     >
                                       Ban
                                     </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-
-                  {/* Pending Registrations */}
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col lg:col-span-2">
-                    <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-purple-500" />
-                        Pending Registrations
-                      </h3>
-                      <Badge variant="outline" className="text-neutral-400 border-neutral-800">
-                        {registrations.filter(r => r.status === 'PENDING').length} Pending
-                      </Badge>
-                    </div>
-                    <div className="flex-1 overflow-y-auto max-h-[400px]">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-neutral-800 hover:bg-transparent">
-                            <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
-                            <TableHead className="text-neutral-500 font-medium">Repository</TableHead>
-                            <TableHead className="text-neutral-500 font-medium">Status</TableHead>
-                            <TableHead className="text-neutral-500 font-medium text-center">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {registrations.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center py-12 text-neutral-500">
-                                No registration records found.
+                                  )}
+                                </div>
                               </TableCell>
                             </TableRow>
-                          ) : (
-                            registrations.map((reg) => (
-                              <TableRow key={`${reg.teamId}-${reg.repoId}`} className="border-neutral-800 hover:bg-white/5 transition-colors">
-                                <TableCell className="font-medium text-white p-4">
-                                  {reg.teamName}
-                                </TableCell>
-                                <TableCell className="text-neutral-400 p-4">
-                                  {reg.repoId}
-                                </TableCell>
-                                <TableCell className="p-4">
-                                  <Badge className={
-                                    reg.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                      reg.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                        reg.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                          'bg-neutral-800 text-neutral-500'
-                                  }>
-                                    {reg.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="p-4">
-                                  <div className="flex justify-center gap-2">
-                                    {reg.status === 'PENDING' && (
-                                      <>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleApproveTeamResult(reg.teamId, true)}
-                                          className="text-green-500 hover:text-green-400 hover:bg-green-500/10 h-8 px-3"
-                                        >
-                                          Approve
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleApproveTeamResult(reg.teamId, false)}
-                                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
-                                        >
-                                          Reject
-                                        </Button>
-                                      </>
-                                    )}
-                                    {reg.status === 'APPROVED' && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleBanTeam(reg.teamId)}
-                                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
-                                      >
-                                        Ban
-                                      </Button>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
+
             )}
           </div >
         </div >
