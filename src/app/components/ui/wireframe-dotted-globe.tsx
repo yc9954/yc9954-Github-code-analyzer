@@ -451,7 +451,7 @@ export default function RotatingEarth({
           maxWidth: "100%", 
           height: "auto",
           opacity: isVisible ? 1 : 0,
-          transition: "opacity 3s cubic-bezier(0.98, 0.02, 0.9, 0.1)"
+          transition: "opacity 2s cubic-bezier(0.98, 0.02, 0.9, 0.1)"
         }}
       />
       {isLoading && (

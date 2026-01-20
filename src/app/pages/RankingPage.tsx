@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
-import { Trophy } from "lucide-react";
+import { FaTrophy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import defaultAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
@@ -81,7 +81,66 @@ export function RankingPage() {
                     >
                       <TableCell className="font-medium text-white py-1">
                         <div className="flex items-center gap-1.5">
-                          {person.rank <= 3 && <Trophy className="w-3 h-3 text-[#f0883e]" />}
+                          {person.rank === 1 && (
+                            <div 
+                              className="relative w-3 h-3 flex items-center justify-center"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 12px rgba(255,215,0,0.5), inset 0 0 8px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)'
+                              }}
+                            >
+                              <FaTrophy 
+                                className="w-2.5 h-2.5 relative z-10" 
+                                style={{
+                                  color: '#FFD700',
+                                  filter: 'drop-shadow(0 0 5px rgba(255,215,0,0.9)) drop-shadow(0 0 10px rgba(255,215,0,0.5))'
+                                }}
+                              />
+                            </div>
+                          )}
+                          {person.rank === 2 && (
+                            <div 
+                              className="relative w-3 h-3 flex items-center justify-center"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 12px rgba(192,192,192,0.5), inset 0 0 8px rgba(192,192,192,0.3), 0 0 0 1px rgba(192,192,192,0.2)'
+                              }}
+                            >
+                              <FaTrophy 
+                                className="w-2.5 h-2.5 relative z-10" 
+                                style={{
+                                  color: '#C0C0C0',
+                                  filter: 'drop-shadow(0 0 5px rgba(192,192,192,0.9)) drop-shadow(0 0 10px rgba(192,192,192,0.5))'
+                                }}
+                              />
+                            </div>
+                          )}
+                          {person.rank === 3 && (
+                            <div 
+                              className="relative w-3 h-3 flex items-center justify-center"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(184,115,51,0.15))',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 12px rgba(205,127,50,0.5), inset 0 0 8px rgba(205,127,50,0.3), 0 0 0 1px rgba(205,127,50,0.2)'
+                              }}
+                            >
+                              <FaTrophy 
+                                className="w-2.5 h-2.5 relative z-10" 
+                                style={{
+                                  color: '#CD7F32',
+                                  filter: 'drop-shadow(0 0 5px rgba(205,127,50,0.9)) drop-shadow(0 0 10px rgba(205,127,50,0.5))'
+                                }}
+                              />
+                            </div>
+                          )}
                           <span className="text-xs">#{person.rank}</span>
                         </div>
                       </TableCell>
@@ -129,7 +188,66 @@ export function RankingPage() {
                     >
                       <TableCell className="font-medium text-white py-1">
                         <div className="flex items-center gap-1.5">
-                          {team.rank <= 3 && <Trophy className="w-3 h-3 text-[#f0883e]" />}
+                          {team.rank === 1 && (
+                            <div 
+                              className="relative w-3 h-3 flex items-center justify-center"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 12px rgba(255,215,0,0.5), inset 0 0 8px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)'
+                              }}
+                            >
+                              <FaTrophy 
+                                className="w-2.5 h-2.5 relative z-10" 
+                                style={{
+                                  color: '#FFD700',
+                                  filter: 'drop-shadow(0 0 5px rgba(255,215,0,0.9)) drop-shadow(0 0 10px rgba(255,215,0,0.5))'
+                                }}
+                              />
+                            </div>
+                          )}
+                          {team.rank === 2 && (
+                            <div 
+                              className="relative w-3 h-3 flex items-center justify-center"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 12px rgba(192,192,192,0.5), inset 0 0 8px rgba(192,192,192,0.3), 0 0 0 1px rgba(192,192,192,0.2)'
+                              }}
+                            >
+                              <FaTrophy 
+                                className="w-2.5 h-2.5 relative z-10" 
+                                style={{
+                                  color: '#C0C0C0',
+                                  filter: 'drop-shadow(0 0 5px rgba(192,192,192,0.9)) drop-shadow(0 0 10px rgba(192,192,192,0.5))'
+                                }}
+                              />
+                            </div>
+                          )}
+                          {team.rank === 3 && (
+                            <div 
+                              className="relative w-3 h-3 flex items-center justify-center"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(184,115,51,0.15))',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 12px rgba(205,127,50,0.5), inset 0 0 8px rgba(205,127,50,0.3), 0 0 0 1px rgba(205,127,50,0.2)'
+                              }}
+                            >
+                              <FaTrophy 
+                                className="w-2.5 h-2.5 relative z-10" 
+                                style={{
+                                  color: '#CD7F32',
+                                  filter: 'drop-shadow(0 0 5px rgba(205,127,50,0.9)) drop-shadow(0 0 10px rgba(205,127,50,0.5))'
+                                }}
+                              />
+                            </div>
+                          )}
                           <span className="text-xs">#{team.rank}</span>
                         </div>
                       </TableCell>

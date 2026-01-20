@@ -3,7 +3,6 @@ import {
   LayoutDashboard, 
   GitBranch, 
   Zap, 
-  Trophy, 
   GitCommit, 
   Settings,
   Github,

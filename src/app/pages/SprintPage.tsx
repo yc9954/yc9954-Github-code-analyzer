@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/app/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { Trophy, TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare } from "lucide-react";
+import { FaTrophy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Progress } from "@/app/components/ui/progress";
 import { Calendar } from "@/app/components/ui/calendar";
@@ -372,7 +373,7 @@ export function SprintPage() {
                 variant="outline"
                 className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-xs px-3"
               >
-                <Trophy className="w-4 h-4 mr-1" />
+                <FaTrophy className="w-4 h-4 mr-1" />
                 Ranking
               </Button>
               <Button 
@@ -616,7 +617,66 @@ export function SprintPage() {
                         <TableRow key={team.rank} className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8">
                           <TableCell className="font-medium text-white text-sm py-1">
                             <div className="flex items-center gap-1">
-                              {team.rank <= 3 && <Trophy className="w-4 h-4 text-[#f0883e]" />}
+                              {team.rank === 1 && (
+                                <div 
+                                  className="relative w-4 h-4 flex items-center justify-center"
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 16px rgba(255,215,0,0.5), inset 0 0 10px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)'
+                                  }}
+                                >
+                                  <FaTrophy 
+                                    className="w-3 h-3 relative z-10" 
+                                    style={{
+                                      color: '#FFD700',
+                                      filter: 'drop-shadow(0 0 6px rgba(255,215,0,0.9)) drop-shadow(0 0 12px rgba(255,215,0,0.5))'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              {team.rank === 2 && (
+                                <div 
+                                  className="relative w-4 h-4 flex items-center justify-center"
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 16px rgba(192,192,192,0.5), inset 0 0 10px rgba(192,192,192,0.3), 0 0 0 1px rgba(192,192,192,0.2)'
+                                  }}
+                                >
+                                  <FaTrophy 
+                                    className="w-3 h-3 relative z-10" 
+                                    style={{
+                                      color: '#C0C0C0',
+                                      filter: 'drop-shadow(0 0 6px rgba(192,192,192,0.9)) drop-shadow(0 0 12px rgba(192,192,192,0.5))'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              {team.rank === 3 && (
+                                <div 
+                                  className="relative w-4 h-4 flex items-center justify-center"
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(184,115,51,0.15))',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 16px rgba(205,127,50,0.5), inset 0 0 10px rgba(205,127,50,0.3), 0 0 0 1px rgba(205,127,50,0.2)'
+                                  }}
+                                >
+                                  <FaTrophy 
+                                    className="w-3 h-3 relative z-10" 
+                                    style={{
+                                      color: '#CD7F32',
+                                      filter: 'drop-shadow(0 0 6px rgba(205,127,50,0.9)) drop-shadow(0 0 12px rgba(205,127,50,0.5))'
+                                    }}
+                                  />
+                                </div>
+                              )}
                               <span>#{team.rank}</span>
                             </div>
                           </TableCell>
@@ -672,7 +732,66 @@ export function SprintPage() {
                         >
                           <TableCell className="font-medium text-white py-1">
                             <div className="flex items-center gap-1.5">
-                              {person.rank <= 3 && <Trophy className="w-4 h-4 text-[#f0883e]" />}
+                              {person.rank === 1 && (
+                                <div 
+                                  className="relative w-4 h-4 flex items-center justify-center"
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,223,0,0.15))',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 16px rgba(255,215,0,0.5), inset 0 0 10px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)'
+                                  }}
+                                >
+                                  <FaTrophy 
+                                    className="w-3 h-3 relative z-10" 
+                                    style={{
+                                      color: '#FFD700',
+                                      filter: 'drop-shadow(0 0 6px rgba(255,215,0,0.9)) drop-shadow(0 0 12px rgba(255,215,0,0.5))'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              {person.rank === 2 && (
+                                <div 
+                                  className="relative w-4 h-4 flex items-center justify-center"
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(192,192,192,0.25), rgba(169,169,169,0.15))',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 16px rgba(192,192,192,0.5), inset 0 0 10px rgba(192,192,192,0.3), 0 0 0 1px rgba(192,192,192,0.2)'
+                                  }}
+                                >
+                                  <FaTrophy 
+                                    className="w-3 h-3 relative z-10" 
+                                    style={{
+                                      color: '#C0C0C0',
+                                      filter: 'drop-shadow(0 0 6px rgba(192,192,192,0.9)) drop-shadow(0 0 12px rgba(192,192,192,0.5))'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              {person.rank === 3 && (
+                                <div 
+                                  className="relative w-4 h-4 flex items-center justify-center"
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(205,127,50,0.25), rgba(184,115,51,0.15))',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 16px rgba(205,127,50,0.5), inset 0 0 10px rgba(205,127,50,0.3), 0 0 0 1px rgba(205,127,50,0.2)'
+                                  }}
+                                >
+                                  <FaTrophy 
+                                    className="w-3 h-3 relative z-10" 
+                                    style={{
+                                      color: '#CD7F32',
+                                      filter: 'drop-shadow(0 0 6px rgba(205,127,50,0.9)) drop-shadow(0 0 12px rgba(205,127,50,0.5))'
+                                    }}
+                                  />
+                                </div>
+                              )}
                               <span className="text-sm">#{person.rank}</span>
                             </div>
                           </TableCell>
