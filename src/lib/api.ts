@@ -179,6 +179,22 @@ export interface Repository {
   languages?: Record<string, number>;
 }
 
+export interface TeamRepo {
+  id: string;
+  reponame: string;
+  repoUrl: string;
+  description: string;
+  language: string;
+  size: number;
+  stars: number;
+  topics: string[];
+  createdAt: string;
+  updatedAt: string;
+  pushedAt: string;
+  lastSyncAt: string;
+  languages: Record<string, number>;
+}
+
 export interface Branch {
   name: string;
   commits: number;
@@ -268,6 +284,12 @@ export interface CommitAnalysisResponse {
   analysisReason?: string;
 }
 
+export interface RepoMetrics {
+  commitCount: number;
+  averageScore: number;
+  totalScore: number;
+}
+
 // ==================== API Functions ====================
 
 /**
@@ -277,7 +299,7 @@ export async function searchRepositories(
   query: string,
   language?: string,
   sort: 'best-match' | 'stars' | 'updated' = 'best-match',
-  type: 'repositories' | 'users' | 'ALL' = 'ALL',
+  type: 'repositories' | 'users' | 'teams' | 'sprints' | 'ALL' = 'ALL',
   page: number = 1,
   perPage: number = 20
 ): Promise<SearchResponse> {
@@ -300,6 +322,8 @@ export async function searchRepositories(
     let backendType = 'ALL';
     if (type === 'repositories') backendType = 'REPOSITORY';
     else if (type === 'users') backendType = 'USER';
+    else if (type === 'teams') backendType = 'TEAM';
+    else if (type === 'sprints') backendType = 'SPRINT';
 
     if (backendType !== 'ALL') {
       params.set('type', backendType);
@@ -345,12 +369,14 @@ export async function searchRepositories(
     return {
       repositories: type === 'repositories' || type === 'ALL' ? repositories : undefined,
       users: type === 'users' || type === 'ALL' ? users : undefined,
+      teams: data.teams,
+      sprints: data.sprints,
       // If backend provides totals, use them. Otherwise fallback to current page length (inaccurate but safer than nothing)
-      total: data.total || (repositories.length + users.length),
+      total: data.total || (repositories.length + users.length + (data.teams?.length || 0) + (data.sprints?.length || 0)),
       queryTime: 0,
       page,
       perPage,
-      totalPages: data.totalPages || Math.ceil((repositories.length + users.length) / perPage) || 1,
+      totalPages: data.totalPages || Math.ceil((repositories.length + users.length + (data.teams?.length || 0) + (data.sprints?.length || 0)) / perPage) || 1,
     };
   } catch (error) {
     console.error('Error searching:', error);
@@ -605,6 +631,26 @@ export async function syncRepository(owner: string, repo: string): Promise<void>
   }
 }
 
+/**
+ * Get repository metrics
+ */
+export async function getRepoMetrics(repoId: string): Promise<RepoMetrics | null> {
+  try {
+    // repoId corresponds to 'reponame' (owner/repo) from TeamRepo
+    // We encode it because the backend route is /api/repos/[...repoId]/metrics
+    // But we need to pass it properly.
+    // Frontend route: /api/repos/owner/repo/metrics
+    // encodeURIComponent(repoId) would enable passing slashes in one segment if the backend expects it.
+    // However, the Next.js catch-all route [...repoId] will capture 'owner/repo' as ['owner', 'repo'].
+    // So we can just pass the path.
+    const data = await apiCall<RepoMetrics>(`/api/repos/${repoId}/metrics`);
+    return data;
+  } catch (error) {
+    console.error(`Error fetching metrics for ${repoId}:`, error);
+    return null;
+  }
+}
+
 // ==================== Sprint API ====================
 
 export interface Sprint {
@@ -644,21 +690,27 @@ export interface SprintRanking {
  */
 export async function getSprints(): Promise<Sprint[]> {
   try {
-    const data = await apiCall<Array<{
-      id: string;
-      name: string;
-      startDate: string;
-      endDate: string;
-      description?: string;
-      managerName?: string;
-      isPrivate: boolean;
-      isOpen: boolean;
-      teamsCount?: number;
-      participantsCount?: number;
-      status?: string;
-    }>>('/api/sprints');
+    const data = await apiCall<{
+      content: Array<{
+        id: string;
+        name: string;
+        startDate: string;
+        endDate: string;
+        description?: string;
+        managerName?: string;
+        isPrivate: boolean;
+        isOpen: boolean;
+        teamsCount?: number;
+        participantsCount?: number;
+        status?: string;
+      }>;
+      hasNext: boolean;
+    }>('/api/sprints');
 
-    return data.map((sprint) => ({
+    // Extract content array from paginated response
+    const sprints = data.content || [];
+
+    return sprints.map((sprint) => ({
       id: sprint.id,
       name: sprint.name,
       startDate: sprint.startDate,
@@ -762,32 +814,70 @@ export async function registerSprint(
  */
 export async function getSprintRankings(
   sprintId: string,
-  type: 'TEAM' | 'INDIVIDUAL' = 'TEAM'
+  type: 'TEAM' | 'INDIVIDUAL' = 'TEAM' // Note: New API might only support INDIVIDUAL (users) based on curl? Keeping signature for now.
 ): Promise<SprintRanking[]> {
   try {
-    const data = await apiCall<Array<{
-      rank: number;
-      team?: {
-        teamId: string;
-        name: string;
-        score: number;
-        commits: number;
-        members: number;
-      };
-      user?: {
-        userId: number;
-        username: string;
-        profileUrl: string;
-        score: number;
-        commits: number;
-      };
-    }>>(`/api/sprints/${sprintId}/ranking?type=${type}`);
+    // Current user request strictly asks for: api/rankings/users?scope=SPRINT&id=...
+    // We will use type to decide if we call this new endpoint (for individual) or keep old one (for team).
+    // Or, if user implies this IS the ranking API now.
+    // Let's assume 'INDIVIDUAL' maps to this new endpoint.
 
-    return data.map((item) => ({
-      rank: item.rank,
-      team: item.team,
-      user: item.user,
-    }));
+    if (type === 'INDIVIDUAL') {
+      const response = await apiCall<{
+        status: string;
+        message: string;
+        data: Array<{
+          profileUrl: string;
+          rank: number;
+          totalScore: number;
+          username: string;
+        }>;
+      }>(`/api/rankings/users?scope=SPRINT&id=${sprintId}&period=ALL&limit=10`);
+
+      if (!response.data || !Array.isArray(response.data)) {
+        return [];
+      }
+
+      return response.data.map(item => ({
+        rank: item.rank,
+        user: {
+          userId: 0, // Not provided in new response
+          username: item.username,
+          profileUrl: item.profileUrl,
+          score: item.totalScore,
+          commits: 0 // Not provided
+        }
+      }));
+    } else {
+      // Updated TEAM ranking logic based on user provided curl/response
+      const response = await apiCall<{
+        status: string;
+        message: string;
+        data: Array<{
+          rank: number;
+          teamName: string;
+          score: number;
+          commits: number;
+          memberCount: number;
+        }>;
+      }>(`/api/sprints/${sprintId}/ranking?type=TEAM`);
+
+      if (!response.data || !Array.isArray(response.data)) {
+        return [];
+      }
+
+      return response.data.map((item) => ({
+        rank: item.rank,
+        team: {
+          teamId: "unknown",
+          name: item.teamName,
+          score: item.score || 0,
+          commits: item.commits || 0,
+          members: item.memberCount || 0
+        },
+      }));
+    }
+
   } catch (error) {
     console.error('Error fetching sprint rankings:', error);
     return [];
@@ -1229,15 +1319,26 @@ export { getAuthToken, setAuthToken };
 
 // ==================== Team API ====================
 
+export interface PageResponse<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+}
+
+
 export interface TeamCreateRequest {
   name: string;
   description: string;
   leaderId: number;
+  isPublic: boolean;
 }
 
 export interface TeamUpdateRequest {
   name: string;
   description: string;
+  isPublic?: boolean;
 }
 
 export interface TeamDetailResponse {
@@ -1248,11 +1349,13 @@ export interface TeamDetailResponse {
   leaderProfileUrl: string;
   isPublic: boolean;
   joinCode: string;
+  memberCount?: number;
 }
 
 export interface TeamMemberResponse {
   userId: number;
   username: string;
+  profileUrl?: string; // Add profileUrl
   role: string;
   status: string;
   inTeamRank: number;
@@ -1260,16 +1363,33 @@ export interface TeamMemberResponse {
   contributionScore: number;
 }
 
+export interface TeamRepo {
+  id: string;
+  reponame: string;
+  repoUrl: string;
+  description: string;
+  language: string;
+  size: number;
+  stars: number;
+  topics: string[];
+  createdAt: string;
+  updatedAt: string;
+  pushedAt: string;
+  lastSyncAt: string;
+  languages: Record<string, number>;
+}
+
 export interface Team {
   id: string; // ID from search is string
   name: string;
   description: string;
+  isPublic?: boolean;
 }
 
 // Create Team
-export async function createTeam(data: TeamCreateRequest): Promise<string> {
+export async function createTeam(data: TeamCreateRequest): Promise<TeamDetailResponse> {
   try {
-    const result = await apiCall<string>('/api/teams', {
+    const result = await apiCall<TeamDetailResponse>('/api/teams', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -1282,13 +1402,33 @@ export async function createTeam(data: TeamCreateRequest): Promise<string> {
 
 // Get Team List (using Search for now as there is no list all teams endpoint)
 export async function getTeams(query: string = ""): Promise<Team[]> {
-  const result = await searchRepositories(query, undefined, undefined, 'TEAM' as any);
+  const result = await searchRepositories(query, undefined, undefined, 'teams');
   return result.teams || [];
 }
 
 // Get Team Detail
 export async function getTeam(teamId: string): Promise<TeamDetailResponse> {
   return apiCall<TeamDetailResponse>(`/api/teams/${teamId}`);
+}
+
+// Get My Teams (Active/Approved)
+export async function getMyTeams(): Promise<TeamDetailResponse[]> {
+  return apiCall<TeamDetailResponse[]>('/api/teams/my');
+}
+
+// Get My Pending Teams
+export async function getMyPendingTeams(): Promise<TeamDetailResponse[]> {
+  return apiCall<TeamDetailResponse[]>('/api/teams/my?status=PENDING');
+}
+
+// Get Leader Teams
+export async function getLeaderTeams(): Promise<TeamDetailResponse[]> {
+  return apiCall<TeamDetailResponse[]>('/api/teams/leader');
+}
+
+// Get Public Teams (Paginated)
+export async function getPublicTeams(page: number = 0, size: number = 10): Promise<PageResponse<TeamDetailResponse>> {
+  return apiCall<PageResponse<TeamDetailResponse>>(`/api/teams/public?page=${page}&size=${size}`);
 }
 
 // Update Team
@@ -1300,9 +1440,9 @@ export async function updateTeam(teamId: string, data: TeamUpdateRequest): Promi
 }
 
 // Join Team
-export async function joinTeam(teamId: string, code?: string): Promise<void> {
-  const url = code ? `/api/teams/${teamId}/join?code=${code}` : `/api/teams/${teamId}/join`;
-  await apiCall(url, {
+export async function joinTeam(teamId: string): Promise<TeamMemberResponse> {
+  const url = `/api/teams/${teamId}/join`;
+  return apiCall<TeamMemberResponse>(url, {
     method: 'POST',
   });
 }
@@ -1324,6 +1464,52 @@ export async function removeMember(teamId: string, userId: number): Promise<void
 // Get Team Members
 export async function getTeamMembers(teamId: string): Promise<TeamMemberResponse[]> {
   return apiCall<TeamMemberResponse[]>(`/api/teams/${teamId}/members`);
+}
+
+/**
+ * Get available repositories for a team
+ */
+export async function getAvailableTeamRepos(teamId: string): Promise<TeamRepo[]> {
+  try {
+    const data = await apiCall<{ data: TeamRepo[] } | TeamRepo[]>(`/api/teams/${teamId}/repos/available`);
+    // Handle both wrapped and unwrapped responses if necessary, but apiCall handles 'data' key mainly.
+    // If apiCall unwraps 'data', then 'data' variable holds the array.
+    // However, the Swagger says response is { status, message, data: [...] }.
+    // My apiCall implementation (lines 147-152) checks for 'data' property and returns it if present.
+    // So 'data' here should be TeamRepo[] directly.
+    return data as TeamRepo[];
+  } catch (error) {
+    console.error('Error fetching available team repos:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add a repository to a team
+ */
+export async function addRepoToTeam(teamId: string, repoId: string): Promise<void> {
+  try {
+    await apiCall(`/api/teams/${teamId}/repos`, {
+      method: 'POST',
+      body: JSON.stringify({ repoId }),
+    });
+  } catch (error) {
+    console.error('Error adding repo to team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get team repositories
+ */
+export async function getTeamRepos(teamId: string): Promise<TeamRepo[]> {
+  try {
+    const data = await apiCall<{ data: TeamRepo[] } | TeamRepo[]>(`/api/teams/${teamId}/repos`);
+    return data as TeamRepo[];
+  } catch (error) {
+    console.error('Error fetching team repos:', error);
+    throw error;
+  }
 }
 /**
  * Withdraw user (Delete Account)

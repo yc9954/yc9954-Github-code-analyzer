@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/app/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare, X, User } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare, X, User, Calendar as CalendarIcon } from "lucide-react";
 import { FaTrophy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Progress } from "@/app/components/ui/progress";
@@ -491,12 +491,16 @@ export function SprintPage() {
 
   // Load sprint rankings and registrations when a sprint is selected
   useEffect(() => {
-    if (selectedSprint && (viewMode === 'ranking' || viewMode === 'manage')) {
+    // Load rankings if in 'ranking' mode OR 'participate' (detail) mode
+    if (selectedSprint && (viewMode === 'ranking' || viewMode === 'manage' || viewMode === 'participate')) {
       const loadRankings = async () => {
         setLoadingRankings(true);
         try {
           const sprintId = sprints.find(s => s.id === selectedSprint.toString())?.id || selectedSprint.toString();
-          const data = await getSprintRankings(sprintId, rankingViewType === 'team' ? 'TEAM' : 'INDIVIDUAL');
+          // Use INDIVIDUAL for detail view by default, or the selected rankingViewType
+          const type = viewMode === 'participate' ? 'INDIVIDUAL' : (rankingViewType === 'team' ? 'TEAM' : 'INDIVIDUAL');
+
+          const data = await getSprintRankings(sprintId, type);
           setSprintRankings(data);
         } catch (error) {
           console.error('Error loading sprint rankings:', error);
@@ -628,7 +632,14 @@ export function SprintPage() {
                     </TableHeader>
                     <TableBody>
                       {paginatedSprints.map((sprint) => (
-                        <TableRow key={sprint.id} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                        <TableRow
+                          key={sprint.id}
+                          className="border-neutral-800 bg-black hover:bg-neutral-900 h-8 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setSelectedSprint(sprint.id);
+                            setViewMode("participate");
+                          }}
+                        >
                           <TableCell className="font-medium text-white text-sm py-1">{sprint.name}</TableCell>
                           <TableCell className="text-white/60 text-sm py-1">
                             {format(new Date(sprint.startDate), 'MMM dd')} - {format(new Date(sprint.endDate), 'MMM dd')}
@@ -640,18 +651,7 @@ export function SprintPage() {
                               {sprint.status || (sprint.isOpen ? 'active' : 'closed')}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right py-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs px-2 text-neutral-400 hover:text-white"
-                              onClick={() => {
-                                setSelectedSprint(sprint.id);
-                                setViewMode("participate");
-                              }}
-                            >
-                              Participate
-                            </Button>
+                          <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
                             {currentUser && sprint.managerName === currentUser.username && (
                               <Button
                                 variant="ghost"
@@ -743,7 +743,7 @@ export function SprintPage() {
                             <span className="font-medium">{selectedSprintData.managerName || "Unknown"}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-neutral-300 bg-neutral-800/50 px-3 py-1.5 rounded-md border border-neutral-800">
-                            <Calendar className="w-4 h-4 text-green-400" />
+                            <CalendarIcon className="w-4 h-4 text-green-400" />
                             <span className="text-neutral-500">Period:</span>
                             <span className="font-medium">
                               {format(new Date(selectedSprintData.startDate), 'yyyy.MM.dd')} - {format(new Date(selectedSprintData.endDate), 'yyyy.MM.dd')}
@@ -768,11 +768,12 @@ export function SprintPage() {
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                  {/* Left - Sprint Selection & Repository */}
+                  {/* Left - Repository & Team Info (Select Sprint hidden) */}
                   <div className="lg:col-span-2 space-y-2">
-                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
+                    {/* Hidden Sprint Select to clean up UI */}
+                    <div className="hidden">
                       <h3 className="text-sm font-medium text-white mb-2">Select Sprint</h3>
-                      <Select onValueChange={(value) => setSelectedSprint(value)}>
+                      <Select value={selectedSprint || ''} onValueChange={(value) => setSelectedSprint(value)}>
                         <SelectTrigger className="bg-black border-neutral-800 text-white h-8 text-sm">
                           <SelectValue placeholder="Choose a sprint to participate" />
                         </SelectTrigger>
@@ -782,9 +783,6 @@ export function SprintPage() {
                               {sprint.name}
                             </SelectItem>
                           ))}
-                          {sprints.length === 0 && !loadingSprints && (
-                            <div className="p-2 text-xs text-neutral-500 text-center">No active sprints found</div>
-                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -836,49 +834,126 @@ export function SprintPage() {
                       </Button>
                     </div>
 
-                    {/* Team Members */}
-                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
-                      <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                        <h3 className="text-sm font-medium text-white">Team Members</h3>
-                      </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Member</TableHead>
-                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Role</TableHead>
-                            <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
-                            <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Contribution</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {teamMembers.map((member) => (
-                            <TableRow key={member.username} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
-                              <TableCell className="py-1">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="w-6 h-6 border border-neutral-800">
-                                    <AvatarImage src={defaultAvatar} />
-                                    <AvatarFallback className="bg-neutral-900 text-white text-xs">
-                                      {member.name.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="text-sm font-medium text-white">{member.name}</div>
-                                    <div className="text-xs text-neutral-400">@{member.username}</div>
+                    {/* Right - Ranking & Team Matches */}
+                    <div className="space-y-2">
+                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden relative">
+                        {/* Header */}
+                        <div className="p-3 border-b border-neutral-800 bg-neutral-900 flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-white flex items-center gap-2">
+                            <FaTrophy className="text-yellow-500" />
+                            Top Sprint Teams
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-blue-400 hover:text-white h-6 px-2"
+                            onClick={() => {
+                              setRankingViewType('team');
+                              const sprintId = sprints.find(s => s.id === selectedSprint?.toString())?.id || selectedSprint?.toString();
+                              if (sprintId) {
+                                getSprintRankings(sprintId, 'TEAM').then(setSprintRankings);
+                              }
+                            }}
+                          >
+                            <Sparkles className="w-3 h-3" />
+                          </Button>
+                        </div>
+
+                        {/* Content with Blur Overlay support */}
+                        <div className="relative">
+                          {/* Blur Overlay Logic */}
+                          {selectedSprintData && (
+                            (new Date() < new Date(selectedSprintData.startDate)) ||
+                            (!loadingRankings && sprintRankings.length === 0)
+                          ) && (
+                              <div className="absolute inset-0 z-10 backdrop-blur-sm bg-black/20 flex flex-col items-center justify-center text-center p-4">
+                                <h4 className="text-white font-bold text-sm mb-1">
+                                  {new Date() < new Date(selectedSprintData.startDate) ? "Coming Soon" : "No Teams Registered"}
+                                </h4>
+                                <p className="text-neutral-300 text-xs">
+                                  {new Date() < new Date(selectedSprintData.startDate)
+                                    ? "Rankings will be available when sprint starts."
+                                    : "Be the first to join!"}
+                                </p>
+                              </div>
+                            )}
+
+                          <div className="p-3 max-h-[400px] overflow-y-auto">
+                            {loadingRankings ? (
+                              <div className="text-center text-neutral-500 text-sm py-8">Loading rankings...</div>
+                            ) : (
+                              <div className="space-y-2">
+                                {sprintRankings.slice(0, 10).map((r, idx) => (
+                                  <div key={idx} className="flex items-center gap-3 bg-black border border-neutral-800 p-2 rounded-md">
+                                    <div className={`font-mono font-bold text-sm min-w-[20px] text-center ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-neutral-300' : idx === 2 ? 'text-amber-600' : 'text-neutral-500'}`}>
+                                      {r.rank}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm text-white font-medium truncate">{r.team?.name || "Unknown Team"}</div>
+                                      <div className="flex gap-2 text-[10px] text-neutral-400">
+                                        <span>{r.team?.score?.toLocaleString() || 0} pts</span>
+                                        <span>•</span>
+                                        <span>{r.team?.members || 0} members</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm text-neutral-400 py-1">{member.role}</TableCell>
-                              <TableCell className="text-sm text-white text-right py-1">{member.commits}</TableCell>
-                              <TableCell className="py-1">
-                                <div className="flex items-center gap-1.5">
-                                  <Progress value={member.contribution} className="flex-1 h-1.5" />
-                                  <span className="text-xs text-neutral-400 min-w-[35px]">{member.contribution}%</span>
-                                </div>
-                              </TableCell>
+                                ))}
+                                {/* Empty state is now handled by the Blur Overlay */}
+                                {sprintRankings.length === 0 && (
+                                  <div className="text-neutral-500 text-xs text-center py-8 opacity-0">
+                                    Placeholder
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Team Members reused or moved if needed, keeping currently as is below */}
+                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
+                        <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
+                          <h3 className="text-sm font-medium text-white">Team Members</h3>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Member</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Role</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Contribution</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {teamMembers.map((member) => (
+                              <TableRow key={member.username} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                                <TableCell className="py-1">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="w-6 h-6 border border-neutral-800">
+                                      <AvatarImage src={defaultAvatar} />
+                                      <AvatarFallback className="bg-neutral-900 text-white text-xs">
+                                        {member.name.split(' ').map(n => n[0]).join('')}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="text-sm font-medium text-white">{member.name}</div>
+                                      <div className="text-xs text-neutral-400">@{member.username}</div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm text-neutral-400 py-1">{member.role}</TableCell>
+                                <TableCell className="text-sm text-white text-right py-1">{member.commits}</TableCell>
+                                <TableCell className="py-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <Progress value={member.contribution} className="flex-1 h-1.5" />
+                                    <span className="text-xs text-neutral-400 min-w-[35px]">{member.contribution}%</span>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1164,7 +1239,8 @@ export function SprintPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
+                    {/* Calendar Component */}
+                    <div className="w-80">
                       <CalendarWithRangePresets
                         dateRange={dateRange}
                         setDateRange={setDateRange}
@@ -1250,158 +1326,160 @@ export function SprintPage() {
                       </Button>
                     </div>
                   </div>
-                </div>
+                  {/* Removed extra closing div that broke the grid */}
 
-                {/* Right: Team Management */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
-                  <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <FaTrophy className="w-5 h-5 text-yellow-500" />
-                      Registered Teams
-                    </h3>
-                    <Badge variant="outline" className="text-neutral-400 border-neutral-800">
-                      {sprintRankings.length} Teams
-                    </Badge>
-                  </div>
-                  <div className="flex-1 overflow-y-auto max-h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-neutral-800 hover:bg-transparent">
-                          <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
-                          <TableHead className="text-neutral-500 font-medium text-right">Score</TableHead>
-                          <TableHead className="text-neutral-500 font-medium text-center w-24">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sprintRankings.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-center py-12 text-neutral-500">
-                              No teams registered in this sprint.
-                            </TableCell>
+                  {/* Right: Team Management */}
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
+                    <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <FaTrophy className="w-5 h-5 text-yellow-500" />
+                        Registered Teams
+                      </h3>
+                      <Badge variant="outline" className="text-neutral-400 border-neutral-800">
+                        {sprintRankings.length} Teams
+                      </Badge>
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-[500px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 hover:bg-transparent">
+                            <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
+                            <TableHead className="text-neutral-500 font-medium text-right">Score</TableHead>
+                            <TableHead className="text-neutral-500 font-medium text-center w-24">Actions</TableHead>
                           </TableRow>
-                        ) : (
-                          sprintRankings.map((item) => item.team && (
-                            <TableRow key={item.team.teamId} className="border-neutral-800 hover:bg-white/5 transition-colors">
-                              <TableCell className="font-medium text-white p-4">
-                                {item.team.name}
-                              </TableCell>
-                              <TableCell className="text-right text-blue-400 font-mono p-4">
-                                {item.team.score.toLocaleString()}
-                              </TableCell>
-                              <TableCell className="p-4">
-                                <div className="flex justify-center">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleBanTeam(item.team!.teamId)}
-                                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
-                                  >
-                                    Ban
-                                  </Button>
-                                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {sprintRankings.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-12 text-neutral-500">
+                                No teams registered in this sprint.
                               </TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                {/* Pending Registrations */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col lg:col-span-2">
-                  <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5 text-purple-500" />
-                      Pending Registrations
-                    </h3>
-                    <Badge variant="outline" className="text-neutral-400 border-neutral-800">
-                      {registrations.filter(r => r.status === 'PENDING').length} Pending
-                    </Badge>
-                  </div>
-                  <div className="flex-1 overflow-y-auto max-h-[400px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-neutral-800 hover:bg-transparent">
-                          <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
-                          <TableHead className="text-neutral-500 font-medium">Repository</TableHead>
-                          <TableHead className="text-neutral-500 font-medium">Status</TableHead>
-                          <TableHead className="text-neutral-500 font-medium text-center">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {registrations.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-12 text-neutral-500">
-                              No registration records found.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          registrations.map((reg) => (
-                            <TableRow key={`${reg.teamId}-${reg.repoId}`} className="border-neutral-800 hover:bg-white/5 transition-colors">
-                              <TableCell className="font-medium text-white p-4">
-                                {reg.teamName}
-                              </TableCell>
-                              <TableCell className="text-neutral-400 p-4">
-                                {reg.repoId}
-                              </TableCell>
-                              <TableCell className="p-4">
-                                <Badge className={
-                                  reg.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                    reg.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                      reg.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                        'bg-neutral-800 text-neutral-500'
-                                }>
-                                  {reg.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="p-4">
-                                <div className="flex justify-center gap-2">
-                                  {reg.status === 'PENDING' && (
-                                    <>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleApproveTeamResult(reg.teamId, true)}
-                                        className="text-green-500 hover:text-green-400 hover:bg-green-500/10 h-8 px-3"
-                                      >
-                                        Approve
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleApproveTeamResult(reg.teamId, false)}
-                                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
-                                      >
-                                        Reject
-                                      </Button>
-                                    </>
-                                  )}
-                                  {reg.status === 'APPROVED' && (
+                          ) : (
+                            sprintRankings.map((item) => item.team && (
+                              <TableRow key={item.team.teamId} className="border-neutral-800 hover:bg-white/5 transition-colors">
+                                <TableCell className="font-medium text-white p-4">
+                                  {item.team.name}
+                                </TableCell>
+                                <TableCell className="text-right text-blue-400 font-mono p-4">
+                                  {item.team.score.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  <div className="flex justify-center">
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleBanTeam(reg.teamId)}
+                                      onClick={() => handleBanTeam(item.team!.teamId)}
                                       className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
                                     >
                                       Ban
                                     </Button>
-                                  )}
-                                </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  {/* Pending Registrations */}
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl flex flex-col lg:col-span-2">
+                    <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-purple-500" />
+                        Pending Registrations
+                      </h3>
+                      <Badge variant="outline" className="text-neutral-400 border-neutral-800">
+                        {registrations.filter(r => r.status === 'PENDING').length} Pending
+                      </Badge>
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-[400px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-neutral-800 hover:bg-transparent">
+                            <TableHead className="text-neutral-500 font-medium">Team Name</TableHead>
+                            <TableHead className="text-neutral-500 font-medium">Repository</TableHead>
+                            <TableHead className="text-neutral-500 font-medium">Status</TableHead>
+                            <TableHead className="text-neutral-500 font-medium text-center">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {registrations.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-12 text-neutral-500">
+                                No registration records found.
                               </TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                          ) : (
+                            registrations.map((reg) => (
+                              <TableRow key={`${reg.teamId}-${reg.repoId}`} className="border-neutral-800 hover:bg-white/5 transition-colors">
+                                <TableCell className="font-medium text-white p-4">
+                                  {reg.teamName}
+                                </TableCell>
+                                <TableCell className="text-neutral-400 p-4">
+                                  {reg.repoId}
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  <Badge className={
+                                    reg.status === 'APPROVED' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                      reg.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                        reg.status === 'REJECTED' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                          'bg-neutral-800 text-neutral-500'
+                                  }>
+                                    {reg.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  <div className="flex justify-center gap-2">
+                                    {reg.status === 'PENDING' && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleApproveTeamResult(reg.teamId, true)}
+                                          className="text-green-500 hover:text-green-400 hover:bg-green-500/10 h-8 px-3"
+                                        >
+                                          Approve
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleApproveTeamResult(reg.teamId, false)}
+                                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                        >
+                                          Reject
+                                        </Button>
+                                      </>
+                                    )}
+                                    {reg.status === 'APPROVED' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleBanTeam(reg.teamId)}
+                                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-8 px-3"
+                                      >
+                                        Ban
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
               </div>
 
             )}
-          </div >
-        </div >
-      </div >
-    </DashboardLayout >
+          </div>
+        </div>
+      </div>
+
+    </DashboardLayout>
   );
 }

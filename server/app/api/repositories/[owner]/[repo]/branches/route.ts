@@ -4,8 +4,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ owner: string; repo: string }> }
 ) {
+  const { owner, repo } = await params;
   try {
-    const { owner, repo } = await params;
 
     if (!owner || !repo) {
       return NextResponse.json(
@@ -16,7 +16,7 @@ export async function GET(
 
     // GitHub API를 사용하여 브랜치 목록 가져오기
     const githubUrl = `https://api.github.com/repos/${owner}/${repo}/branches`;
-    
+
     const githubToken = process.env.GITHUB_TOKEN;
     const headers: HeadersInit = {
       'Accept': 'application/vnd.github.v3+json',
@@ -24,7 +24,7 @@ export async function GET(
     if (githubToken) {
       headers['Authorization'] = `token ${githubToken}`;
     }
-    
+
     const startTime = Date.now();
     const response = await fetch(githubUrl, { headers });
 
@@ -109,7 +109,7 @@ export async function GET(
                     'Accept': 'application/vnd.github.v3+json',
                   },
                 });
-                
+
                 if (allCommitsResponse.ok) {
                   // Link 헤더에서 전체 개수 추출 시도
                   const linkHeader = allCommitsResponse.headers.get('link');
@@ -120,7 +120,7 @@ export async function GET(
                       commits = parseInt(match[1]) * 30; // per_page가 30이므로
                     }
                   }
-                  
+
                   // Link 헤더가 없으면 브랜치의 첫 번째 커밋까지의 개수로 추정
                   if (commits === 0) {
                     // 간단한 방법: 브랜치의 커밋을 여러 페이지 가져와서 개수 세기
@@ -133,7 +133,7 @@ export async function GET(
                           'Accept': 'application/vnd.github.v3+json',
                         },
                       });
-                      
+
                       if (pageResponse.ok) {
                         const pageData = await pageResponse.json();
                         if (pageData.length === 0) break;

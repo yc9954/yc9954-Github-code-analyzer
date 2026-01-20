@@ -37,11 +37,6 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
       navigate('/');
     } catch (err) {
       console.error("Logout failed", err);
-      // Fallback is handled in context or here
-      try {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      } catch (e) { }
       navigate('/');
     }
   };
@@ -113,63 +108,32 @@ export function TopBar({ onToggleSidebar, isSidebarOpen }: TopBarProps) {
               <DropdownMenuLabel className="text-white">My Account</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-neutral-800" />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
+                <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800 cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile & Setting</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  <span>Billing</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                  <Keyboard className="mr-2 h-4 w-4" />
-                  <span>Keyboard shortcuts</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator className="bg-neutral-800" />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => navigate('/teams')} className="text-white focus:bg-neutral-800">
+                <DropdownMenuItem onClick={() => navigate('/teams')} className="text-white focus:bg-neutral-800 cursor-pointer">
                   <Users className="mr-2 h-4 w-4" />
                   <span>Team</span>
                 </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="text-white focus:bg-neutral-800">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    <span>Invite users</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="bg-neutral-900 border-neutral-800">
-                      <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                        <Mail className="mr-2 h-4 w-4" />
-                        <span>Email</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        <span>Message</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-neutral-800" />
-                      <DropdownMenuItem className="text-white focus:bg-neutral-800">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        <span>More...</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
-                <DropdownMenuItem onClick={() => navigate('/teams')} className="text-white focus:bg-neutral-800">
+                <DropdownMenuItem onClick={() => navigate('/teams')} className="text-white focus:bg-neutral-800 cursor-pointer">
                   <Plus className="mr-2 h-4 w-4" />
                   <span>New Team</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator className="bg-neutral-800" />
-              <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800">
+              <DropdownMenuItem onClick={() => navigate('/settings')} className="text-white focus:bg-neutral-800 cursor-pointer">
                 <Github className="mr-2 h-4 w-4" />
                 <span>GitHub</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-white focus:bg-neutral-800">
+              <DropdownMenuItem className="text-neutral-500 focus:bg-neutral-800 cursor-not-allowed opacity-50">
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 <span>Support</span>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled className="text-neutral-500 focus:bg-neutral-800">
+              <DropdownMenuItem className="text-neutral-500 focus:bg-neutral-800 cursor-not-allowed opacity-50">
                 <Cloud className="mr-2 h-4 w-4" />
                 <span>API</span>
               </DropdownMenuItem>

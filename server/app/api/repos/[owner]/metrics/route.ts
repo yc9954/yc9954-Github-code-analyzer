@@ -1,12 +1,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ owner: string }> }
+) {
     try {
-        const sprintGitUrl = `https://api.sprintgit.com/api/auth/logout`;
+        const { owner } = await params;
+        // Handle single segment repo ID case (e.g. "vortexdb")
+        // Here 'owner' captures the single segment ID
+        const sprintGitUrl = `https://api.sprintgit.com/api/repos/${encodeURIComponent(owner)}/metrics`;
 
         const response = await fetch(sprintGitUrl, {
-            method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Authorization': request.headers.get('Authorization') || '',
@@ -16,7 +21,6 @@ export async function POST(request: NextRequest) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`SprintGit API error (${response.status}):`, errorText);
-            // Even if upstream fails, we should probably allow frontend to clear tokens
             return NextResponse.json(
                 { error: `SprintGit API error: ${response.status}`, details: errorText },
                 { status: response.status }
@@ -24,7 +28,6 @@ export async function POST(request: NextRequest) {
         }
 
         const data = await response.json();
-        console.log("Logout successful proxy");
         return NextResponse.json(data);
     } catch (error: any) {
         console.error('Proxy error:', error);

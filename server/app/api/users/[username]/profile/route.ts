@@ -4,8 +4,8 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ username: string }> }
 ) {
+    const { username } = await params;
     try {
-        const username = (await params).username;
         const authHeader = request.headers.get('Authorization');
         console.log(`[API/users/${username}/profile] Received request.`);
 
@@ -17,7 +17,8 @@ export async function GET(
         }
 
         // Proxy the request to the real backend
-        const targetUrl = `https://api.sprintgit.com/api/users/${username}/profile`;
+        const encodedUsername = encodeURIComponent(username);
+        const targetUrl = `https://api.sprintgit.com/api/users/${encodedUsername}/profile`;
         console.log(`[API/users/${username}/profile] Proxying to ${targetUrl}`);
 
         const response = await fetch(targetUrl, {
