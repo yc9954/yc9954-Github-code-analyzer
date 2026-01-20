@@ -738,5 +738,176 @@ export async function getCommitRankings(
   }
 }
 
+// ==================== User & Authentication API ====================
+
+export interface UserResponse {
+  id: number;
+  username: string;
+  email: string;
+  notifyEmail?: string;
+  notifySprint?: boolean;
+  notifyWeekly?: boolean;
+  profileUrl: string;
+  location?: string;
+  publicRepos?: number;
+  company?: string;
+  createdAt: string;
+}
+
+export interface UserUpdateRequest {
+  company?: string;
+  location?: string;
+  notifyEmail?: string;
+  notifySprint?: boolean;
+  notifyWeekly?: boolean;
+}
+
+export interface DashboardStatsResponse {
+  username: string;
+  totalScore: number;
+  totalCommits: number;
+  currentStreak: number;
+  activeSprints: Sprint[];
+}
+
+export interface CommitHeatmapResponse {
+  date: string;
+  count: number;
+}
+
+/**
+ * Get my profile
+ */
+export async function getMyProfile(): Promise<UserResponse> {
+  try {
+    const data = await apiCall<UserResponse>('/api/users/me');
+    return data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update my profile
+ */
+export async function updateMyProfile(updates: UserUpdateRequest): Promise<UserResponse> {
+  try {
+    const data = await apiCall<UserResponse>('/api/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    return data;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get my dashboard stats
+ */
+export async function getMyDashboard(): Promise<DashboardStatsResponse> {
+  try {
+    const data = await apiCall<DashboardStatsResponse>('/api/users/me/dashboard');
+    return data;
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get my recent commits
+ */
+export async function getMyRecentCommits(): Promise<Commit[]> {
+  try {
+    const data = await apiCall<Array<{
+      sha: string;
+      message: string;
+      committedAt: string;
+      authorName: string;
+      authorProfileUrl?: string;
+      analysisStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+      totalScore?: number;
+    }>>('/api/users/me/commits/recent');
+
+    return data.map((commit) => ({
+      sha: commit.sha,
+      message: commit.message,
+      author: commit.authorName,
+      username: commit.authorName,
+      authorName: commit.authorName,
+      authorProfileUrl: commit.authorProfileUrl,
+      time: commit.committedAt,
+      committedAt: commit.committedAt,
+      verified: false,
+      branch: 'main',
+      analysisStatus: commit.analysisStatus,
+      totalScore: commit.totalScore,
+    }));
+  } catch (error) {
+    console.error('Error fetching recent commits:', error);
+    return [];
+  }
+}
+
+/**
+ * Get my commit heatmap
+ */
+export async function getMyHeatmap(): Promise<CommitHeatmapResponse[]> {
+  try {
+    const data = await apiCall<CommitHeatmapResponse[]>('/api/users/me/activities/heatmap');
+    return data;
+  } catch (error) {
+    console.error('Error fetching heatmap:', error);
+    return [];
+  }
+}
+
+/**
+ * Logout
+ */
+export async function logout(): Promise<void> {
+  try {
+    await apiCall<void>('/api/auth/logout', {
+      method: 'POST',
+    });
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  } catch (error) {
+    console.error('Error logging out:', error);
+    // Clear tokens anyway
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  }
+}
+
+/**
+ * Refresh token
+ */
+export async function refreshToken(refreshTokenValue: string): Promise<{ accessToken: string; refreshToken: string }> {
+  try {
+    const data = await apiCall<{
+      grantType: string;
+      accessToken: string;
+      refreshToken: string;
+    }>('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: refreshTokenValue }),
+    });
+    
+    setAuthToken(data.accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('refreshToken', data.refreshToken);
+    }
+    
+    return { accessToken: data.accessToken, refreshToken: data.refreshToken };
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    throw error;
+  }
+}
+
 // Export token management functions
 export { getAuthToken, setAuthToken };

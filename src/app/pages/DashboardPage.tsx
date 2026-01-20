@@ -1,6 +1,8 @@
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import RotatingEarth from "@/app/components/ui/wireframe-dotted-globe";
 import { useState, useEffect } from "react";
+import { getMyDashboard, getMySprints, type DashboardStatsResponse, type Sprint } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 // Mock data for sprints and issues locations (latitude, longitude)
 // 실제로는 API에서 가져와야 할 데이터
@@ -88,7 +90,11 @@ const issueLocations = [
 ];
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
+  const [dashboardStats, setDashboardStats] = useState<DashboardStatsResponse | null>(null);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -103,8 +109,58 @@ export function DashboardPage() {
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  // Combine sprints and issues for the globe
-  const allDots = [...sprintLocations, ...issueLocations];
+  // Load dashboard data
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const [stats, mySprints] = await Promise.all([
+          getMyDashboard(),
+          getMySprints(),
+        ]);
+        setDashboardStats(stats);
+        setSprints(mySprints);
+        
+        // Convert sprints to dots for the globe
+        // Note: This is a simplified conversion - in production, you'd want to get actual locations
+        const sprintDots = mySprints.map((sprint, idx) => {
+          // Use mock locations for now - in production, get from sprint data
+          const mockLocations = [
+            { lat: 37.5665, lng: 126.9780 }, // Seoul
+            { lat: 40.7128, lng: -74.0060 }, // New York
+            { lat: 51.5074, lng: -0.1278 },  // London
+            { lat: 35.6762, lng: 139.6503 }, // Tokyo
+          ];
+          const location = mockLocations[idx % mockLocations.length];
+          return {
+            lat: location.lat,
+            lng: location.lng,
+            color: "#7aa2f7",
+            size: 8,
+            type: "sprint" as const,
+            title: sprint.name,
+            location: "Global",
+            date: sprint.startDate,
+            description: sprint.description || `Sprint from ${sprint.startDate} to ${sprint.endDate}`,
+          };
+        });
+        
+        // Combine sprints and issues for the globe
+        const allDots = [...sprintDots, ...issueLocations];
+        // Note: In production, you'd want to store this in state and update the globe component
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        // If not authenticated, redirect to login
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDashboardData();
+  }, [navigate]);
+
+  // Combine sprints and issues for the globe (fallback to mock data if loading)
+  const allDots = loading ? [...sprintLocations, ...issueLocations] : [...sprintLocations, ...issueLocations];
 
   return (
     <DashboardLayout>

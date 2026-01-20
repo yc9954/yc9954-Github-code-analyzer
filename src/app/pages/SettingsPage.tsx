@@ -1,7 +1,9 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState, useEffect } from "react";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
+import { getMyProfile, updateMyProfile, logout, type UserResponse, type UserUpdateRequest } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -25,7 +27,21 @@ import defaultAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png
 
 export function SettingsPage() {
   const id = useId();
+  const navigate = useNavigate();
   const maxLength = 180;
+  const [user, setUser] = useState<UserResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState<UserUpdateRequest>({
+    company: '',
+    location: '',
+    notifyEmail: '',
+    notifySprint: true,
+    notifyWeekly: false,
+  });
+  
   const { value, characterCount, handleChange, maxLength: limit } = useCharacterLimit({
     maxLength,
     initialValue: "I'm passionate about building user-centric applications that solve problems.",
@@ -38,7 +54,76 @@ export function SettingsPage() {
     handleFileChange,
   } = useImageUpload();
 
-  const profileImage = previewUrl || defaultAvatar;
+  // Load user profile
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const userData = await getMyProfile();
+        setUser(userData);
+        setFormData({
+          company: userData.company || '',
+          location: userData.location || '',
+          notifyEmail: userData.notifyEmail || '',
+          notifySprint: userData.notifySprint ?? true,
+          notifyWeekly: userData.notifyWeekly ?? false,
+        });
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        // If not authenticated, redirect to login
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProfile();
+  }, [navigate]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setUpdating(true);
+    try {
+      const updatedUser = await updateMyProfile(formData);
+      setUser(updatedUser);
+      alert('프로필이 업데이트되었습니다.');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      alert(`프로필 업데이트 실패: ${error.message}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm('정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
+    
+    try {
+      // Delete account API call would go here
+      // For now, just logout
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+    }
+  };
+
+  const profileImage = previewUrl || user?.profileUrl || defaultAvatar;
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-black">
+          <div className="text-white">로딩 중...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <DashboardLayout>
@@ -59,7 +144,9 @@ export function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <Avatar className="w-12 h-12 border border-neutral-800">
                     <AvatarImage src={profileImage} />
-                    <AvatarFallback className="bg-neutral-800 text-white text-sm">JD</AvatarFallback>
+                    <AvatarFallback className="bg-neutral-800 text-white text-sm">
+                      {user.username?.substring(0, 2).toUpperCase() || 'U'}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="text-sm font-medium text-white mb-0.5">Profile Picture</div>
@@ -71,28 +158,32 @@ export function SettingsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-neutral-400 mb-1">Full Name</div>
-                    <div className="text-sm text-white">John Doe</div>
+                    <div className="text-xs text-neutral-400 mb-1">Username</div>
+                    <div className="text-sm text-white">{user.username || 'N/A'}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-neutral-400 mb-1">Role</div>
-                    <div className="text-sm text-white">Web Developer</div>
+                    <div className="text-xs text-neutral-400 mb-1">Public Repos</div>
+                    <div className="text-sm text-white">{user.publicRepos || 0}</div>
                   </div>
                   <div>
                     <div className="text-xs text-neutral-400 mb-1">Email</div>
-                    <div className="text-sm text-white">john.doe@example.com</div>
+                    <div className="text-sm text-white">{user.email || 'N/A'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-neutral-400 mb-1">Location</div>
-                    <div className="text-sm text-white">San Francisco, USA</div>
+                    <div className="text-sm text-white">{user.location || 'Not set'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-neutral-400 mb-1">Company</div>
-                    <div className="text-sm text-white">DevAnalytics</div>
+                    <div className="text-sm text-white">{user.company || 'Not set'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-neutral-400 mb-1">GitHub</div>
-                    <div className="text-sm text-white">github.com/johndoe</div>
+                    <div className="text-sm text-white">
+                      <a href={user.profileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                        {user.profileUrl ? user.profileUrl.replace('https://github.com/', '') : 'N/A'}
+                      </a>
+                    </div>
                   </div>
                 </div>
 
@@ -137,42 +228,25 @@ export function SettingsPage() {
                       <form className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4">
                           <div className="flex-1 space-y-1.5">
-                            <Label htmlFor={`${id}-name`} className="text-white">Full Name</Label>
+                            <Label htmlFor={`${id}-username`} className="text-white">Username</Label>
                             <Input 
-                              id={`${id}-name`} 
-                              placeholder="E.g. John Doe" 
-                              defaultValue="John Doe"
-                              className="bg-neutral-900 border-neutral-800 text-white"
+                              id={`${id}-username`} 
+                              value={user.username || ''}
+                              disabled
+                              className="bg-neutral-800 border-neutral-700 text-neutral-400"
                             />
+                            <p className="text-xs text-neutral-500">Username cannot be changed</p>
                           </div>
-                          <div className="flex-1 space-y-1.5">
-                            <Label htmlFor={`${id}-role`} className="text-white">Role</Label>
-                            <Input 
-                              id={`${id}-role`} 
-                              placeholder="Frontend Developer" 
-                              defaultValue="Web Developer"
-                              className="bg-neutral-900 border-neutral-800 text-white"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-4">
                           <div className="flex-1 space-y-1.5">
                             <Label htmlFor={`${id}-email`} className="text-white">Email</Label>
                             <Input 
                               id={`${id}-email`} 
                               type="email" 
-                              defaultValue="john.doe@example.com"
-                              className="bg-neutral-900 border-neutral-800 text-white"
+                              value={user.email || ''}
+                              disabled
+                              className="bg-neutral-800 border-neutral-700 text-neutral-400"
                             />
-                          </div>
-                          <div className="flex-1 space-y-1.5">
-                            <Label htmlFor={`${id}-portfolio`} className="text-white">Portfolio</Label>
-                            <Input 
-                              id={`${id}-portfolio`} 
-                              defaultValue="https://johndoe.com"
-                              className="bg-neutral-900 border-neutral-800 text-white"
-                            />
+                            <p className="text-xs text-neutral-500">Email is synced from GitHub</p>
                           </div>
                         </div>
 
@@ -181,7 +255,9 @@ export function SettingsPage() {
                             <Label htmlFor={`${id}-location`} className="text-white">Location</Label>
                             <Input 
                               id={`${id}-location`} 
-                              defaultValue="San Francisco, USA"
+                              value={formData.location || ''}
+                              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                              placeholder="e.g. San Francisco, USA"
                               className="bg-neutral-900 border-neutral-800 text-white"
                             />
                           </div>
@@ -189,7 +265,9 @@ export function SettingsPage() {
                             <Label htmlFor={`${id}-company`} className="text-white">Company</Label>
                             <Input 
                               id={`${id}-company`} 
-                              defaultValue="DevAnalytics"
+                              value={formData.company || ''}
+                              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                              placeholder="e.g. DevAnalytics"
                               className="bg-neutral-900 border-neutral-800 text-white"
                             />
                           </div>
@@ -197,19 +275,13 @@ export function SettingsPage() {
 
                         <div className="flex flex-col sm:flex-row gap-4">
                           <div className="flex-1 space-y-1.5">
-                            <Label htmlFor={`${id}-github`} className="text-white">GitHub</Label>
+                            <Label htmlFor={`${id}-notify-email`} className="text-white">Notification Email</Label>
                             <Input 
-                              id={`${id}-github`} 
-                              placeholder="https://github.com/username"
-                              defaultValue="https://github.com/johndoe"
-                              className="bg-neutral-900 border-neutral-800 text-white"
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1.5">
-                            <Label htmlFor={`${id}-linkedin`} className="text-white">LinkedIn</Label>
-                            <Input 
-                              id={`${id}-linkedin`} 
-                              placeholder="https://linkedin.com/in/username"
+                              id={`${id}-notify-email`} 
+                              type="email"
+                              value={formData.notifyEmail || ''}
+                              onChange={(e) => setFormData({ ...formData, notifyEmail: e.target.value })}
+                              placeholder="email@example.com"
                               className="bg-neutral-900 border-neutral-800 text-white"
                             />
                           </div>
@@ -239,8 +311,13 @@ export function SettingsPage() {
                         </Button>
                       </DialogClose>
                       <DialogClose asChild>
-                        <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
-                          Save Changes
+                        <Button 
+                          type="button" 
+                          onClick={handleSaveProfile}
+                          disabled={updating}
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          {updating ? '저장 중...' : 'Save Changes'}
                         </Button>
                       </DialogClose>
                     </DialogFooter>
@@ -257,24 +334,23 @@ export function SettingsPage() {
               <div className="divide-y divide-neutral-800">
                 <div className="flex items-center justify-between px-3 py-2">
                   <div>
-                    <div className="text-sm text-white mb-0.5">Email notifications</div>
-                    <div className="text-xs text-neutral-400">Receive email updates about your activity</div>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between px-3 py-2">
-                  <div>
                     <div className="text-sm text-white mb-0.5">Sprint updates</div>
                     <div className="text-xs text-neutral-400">Get notified about sprint progress</div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={formData.notifySprint ?? false}
+                    onCheckedChange={(checked) => setFormData({ ...formData, notifySprint: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between px-3 py-2">
                   <div>
                     <div className="text-sm text-white mb-0.5">Weekly digest</div>
                     <div className="text-xs text-neutral-400">Receive weekly summary of activity</div>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={formData.notifyWeekly ?? false}
+                    onCheckedChange={(checked) => setFormData({ ...formData, notifyWeekly: checked })}
+                  />
                 </div>
               </div>
             </div>
@@ -290,7 +366,12 @@ export function SettingsPage() {
                     <div className="text-sm font-medium text-white mb-0.5">Delete account</div>
                     <div className="text-xs text-neutral-400">Permanently delete your account and all data</div>
                   </div>
-                  <Button variant="destructive" size="sm" className="h-7 text-xs px-3">
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="h-7 text-xs px-3"
+                    onClick={handleDeleteAccount}
+                  >
                     Delete
                   </Button>
                 </div>
