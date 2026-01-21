@@ -178,6 +178,7 @@ export function RepositoryPage() {
                     className="w-80 bg-neutral-900 border-neutral-800 p-2"
                     align="start"
                     side="bottom"
+                    sideOffset={8}
                   >
                     {loadingRepos ? (
                       <div className="flex items-center justify-center py-8">
@@ -188,7 +189,7 @@ export function RepositoryPage() {
                         <p className="text-xs text-neutral-400">No repositories found</p>
                       </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="max-h-80 overflow-y-auto space-y-1">
                         {repositories.map((repo) => {
                           const repoFullName = repo.fullName || `${repo.owner}/${repo.name}`;
                           const isSelected = selectedRepo === repoFullName;
@@ -204,8 +205,8 @@ export function RepositoryPage() {
                               )}
                             >
                               <div className="flex items-center gap-2">
-                                <GitBranch className="w-4 h-4 text-neutral-400" />
-                                <span className="text-sm text-white font-medium">{repoFullName}</span>
+                                <GitBranch className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                                <span className="text-sm text-white font-medium truncate">{repoFullName}</span>
                               </div>
                               {repo.description && (
                                 <p className="text-xs text-neutral-400 mt-1">{repo.description}</p>
@@ -244,6 +245,7 @@ export function RepositoryPage() {
                     className="w-72 bg-neutral-900 border-neutral-800 p-2"
                     align="start"
                     side="bottom"
+                    sideOffset={8}
                   >
                     {loadingBranches ? (
                       <div className="flex items-center justify-center py-8">
@@ -254,7 +256,7 @@ export function RepositoryPage() {
                         <p className="text-xs text-neutral-400">No branches found</p>
                       </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="max-h-80 overflow-y-auto space-y-1">
                         {availableBranches.map((branch) => (
                           <div
                             key={branch.name}
@@ -267,15 +269,17 @@ export function RepositoryPage() {
                             )}
                           >
                             <div className="flex items-center justify-between">
-                              <div>
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <GitBranch className="w-4 h-4 text-neutral-400" />
-                                  <span className="text-sm text-white font-medium">{branch.name}</span>
+                                  <GitBranch className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                                  <span className="text-sm text-white font-medium truncate">{branch.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className="text-xs text-neutral-400">{branch.commits} commits</span>
                                   <span className="text-xs text-neutral-500">·</span>
-                                  <span className="text-xs text-neutral-400">{branch.lastCommit}</span>
+                                  <span className="text-xs text-neutral-400 font-mono truncate">
+                                    {branch.lastCommit?.substring(0, 7) || 'N/A'}
+                                  </span>
                                 </div>
                               </div>
                             </div>

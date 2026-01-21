@@ -243,6 +243,22 @@ export interface TeamRepo {
   languages: Record<string, number>;
 }
 
+export interface RepositoryDetails {
+  id: string;
+  reponame: string;
+  repoUrl: string;
+  description: string | null;
+  language: string;
+  size: number;
+  stars: number;
+  topics: string[];
+  createdAt: string;
+  updatedAt: string;
+  pushedAt: string;
+  lastSyncAt: string;
+  languages: Record<string, number>;
+}
+
 export interface Branch {
   name: string;
   commits: number;
@@ -622,6 +638,14 @@ export async function syncRepository(repoId: string): Promise<void> {
     console.error(`Error syncing repository ${repoId}:`, error);
   }
 }
+
+/**
+ * Get repository details
+ */
+export async function getRepositoryDetails(repoId: string): Promise<RepositoryDetails> {
+  return await apiCall(`/api/repos/${encodeURIComponent(repoId)}`);
+}
+
 
 /**
  * Get repository metrics
