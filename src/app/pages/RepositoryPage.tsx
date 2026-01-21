@@ -23,6 +23,9 @@ export function RepositoryPage() {
 
   // Load repositories from URL params or fetch user repos
   useEffect(() => {
+    // Always load user repositories to allow switching
+    loadRepositories();
+
     const ownerParam = searchParams.get("owner");
     const repoParam = searchParams.get("repo");
 
@@ -30,10 +33,7 @@ export function RepositoryPage() {
       // Repository was selected from search - set it directly
       const repoFullName = `${ownerParam}/${repoParam}`;
       setSelectedRepo(repoFullName);
-      loadBranches(ownerParam, repoParam);
-    } else {
-      // Load user repositories
-      loadRepositories();
+      // Note: We'll load branches after repositories are loaded
     }
   }, [searchParams]);
 
@@ -59,14 +59,14 @@ export function RepositoryPage() {
   };
 
   // Load branches for selected repository
-  const loadBranches = async (owner: string, repo: string) => {
+  const loadBranches = async (repo: Repository) => {
     setLoadingBranches(true);
     try {
-      const branches = await getRepositoryBranches(owner, repo);
+      const branches = await getRepositoryBranches(repo.id);
       setAvailableBranches(branches);
 
       // Trigger background sync
-      syncRepository(owner, repo).catch(err => console.error("Background sync failed", err));
+      syncRepository(repo.id).catch(err => console.error("Background sync failed", err));
 
       // Auto-select main branch if available
       if (branches.length > 0 && !selectedBranch) {
@@ -126,7 +126,7 @@ export function RepositoryPage() {
     setSelectedRepo(repoFullName);
     setRepoPopoverOpen(false);
     setSelectedBranch(""); // Reset branch when repo changes
-    loadBranches(repo.owner, repo.name);
+    loadBranches(repo);
   };
 
   const handleBranchSelect = (branch: string) => {
@@ -285,6 +285,23 @@ export function RepositoryPage() {
                     )}
                   </PopoverContent>
                 </Popover>
+
+                {/* View Commits Button */}
+                <button
+                  onClick={() => handleSendMessage({
+                    message: "",
+                    files: [],
+                    pastedContent: [],
+                    model: "gpt-4o",
+                    isThinkingEnabled: false
+                  })}
+                  disabled={!selectedRepo || !selectedBranch}
+                  className={cn(
+                    "px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-full text-white text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-2",
+                  )}
+                >
+                  View Commits
+                </button>
               </div>
             </div>
           </div>

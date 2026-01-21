@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import {
   getSprints,
+  getSprint,
   getMySprints,
   getSprintRankings,
   createSprint,
@@ -308,6 +309,39 @@ export function SprintPage() {
     description: "",
     isPublic: true,
   });
+
+  // State for Join Private Sprint
+  const [isJoinPrivateOpen, setIsJoinPrivateOpen] = useState(false);
+  const [joinSprintId, setJoinSprintId] = useState("");
+
+  const handleJoinPrivateSprint = async () => {
+    if (!joinSprintId) {
+      alert("Please enter a Sprint ID.");
+      return;
+    }
+
+    try {
+      const sprint = await getSprint(joinSprintId);
+      if (sprint) {
+        // Add to local sprints state if not present so it can be found by selectedSprintData
+        setSprints(prev => {
+          if (prev.find(s => s.id === sprint.id)) return prev;
+          return [...prev, sprint];
+        });
+
+        // Navigate to participate view for this sprint
+        navigateSprint('participate', sprint.id);
+
+        setIsJoinPrivateOpen(false);
+        setJoinSprintId("");
+      } else {
+        alert("Sprint not found.");
+      }
+    } catch (error) {
+      console.error("Failed to find sprint:", error);
+      alert("Sprint not found or invalid ID. Please check and try again.");
+    }
+  };
 
   const onCreateSprint = async () => {
     if (!createForm.name || !startDate || !endDate || !currentUser) {
@@ -760,6 +794,44 @@ export function SprintPage() {
                   Manage
                 </Button>
               )}
+
+              <Dialog open={isJoinPrivateOpen} onOpenChange={setIsJoinPrivateOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-xs px-3"
+                  >
+                    <Users className="w-4 h-4 mr-1" />
+                    Join Private
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-neutral-900 border-neutral-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle>Join Private Sprint</DialogTitle>
+                    <DialogDescription className="text-neutral-400">
+                      Enter the Sprint ID to participate in a private sprint.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Sprint ID</Label>
+                      <Input
+                        placeholder="UUID of the sprint"
+                        className="bg-black border-neutral-800 text-white"
+                        value={joinSprintId}
+                        onChange={(e) => setJoinSprintId(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={handleJoinPrivateSprint}
+                    >
+                      Find Sprint
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
               <Button
                 onClick={() => navigateSprint("create", null)}
                 className="bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-xs px-3"
@@ -828,7 +900,7 @@ export function SprintPage() {
                               <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Team Name</TableHead>
                               <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Sprint ID</TableHead>
                               <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Repository</TableHead>
-                              <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-center text-xs h-7 py-1 w-[100px]">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -842,7 +914,7 @@ export function SprintPage() {
                                   <TableCell className="font-medium text-white text-sm whitespace-nowrap">{reg.teamName}</TableCell>
                                   <TableCell className="text-neutral-400 text-xs whitespace-nowrap">{reg.sprintId}</TableCell>
                                   <TableCell className="text-neutral-400 text-xs truncate max-w-[150px]">{reg.repoId}</TableCell>
-                                  <TableCell className="text-right">
+                                  <TableCell className="text-center">
                                     <Button
                                       size="sm"
                                       className="bg-blue-600 hover:bg-blue-500 h-7 text-xs px-2"
@@ -869,7 +941,7 @@ export function SprintPage() {
                               <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Teams</TableHead>
                               <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Participants</TableHead>
                               <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Status</TableHead>
-                              <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-center text-xs h-7 py-1 w-[80px]">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -892,7 +964,7 @@ export function SprintPage() {
                                     {sprint.status || (sprint.isOpen ? 'active' : 'closed')}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
+                                <TableCell className="text-center py-1" onClick={(e) => e.stopPropagation()}>
                                   {currentUser && sprint.managerName === currentUser.username && (
                                     <Button
                                       variant="ghost"

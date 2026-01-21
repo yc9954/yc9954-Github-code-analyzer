@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
     let githubUrl: URL;
     let githubQuery = query;
 
-    if (type === 'TEAM' || type === 'SPRINT') {
+    // If type is ALL, TEAM, sprint, or explicitly asking for internal resources, proxy to backend
+    // We'll treat ALL as an internal integrated search
+    if (type === 'ALL' || type === 'TEAM' || type === 'SPRINT') {
       const sprintGitUrl = new URL(`https://api.sprintgit.com/api/search`);
       sprintGitUrl.searchParams.set('q', query);
       sprintGitUrl.searchParams.set('type', type);
@@ -43,19 +45,21 @@ export async function GET(request: NextRequest) {
       });
 
       if (!response.ok) {
+        // If external search fails, we might want to fallback or return error
         throw new Error(`SprintGit API error: ${response.status}`);
       }
 
       const result = await response.json();
       const queryTime = Date.now() - startTime;
 
+      // The backend returns { data: { users, repositories, teams } } for type=ALL
       return NextResponse.json({
-        ...result.data,
-        total: result.data.teams?.length || result.data.sprints?.length || 0,
+        ...result.data, // Spread users, repositories, teams
+        total: (result.data.users?.length || 0) + (result.data.repositories?.length || 0) + (result.data.teams?.length || 0),
         queryTime,
         page,
         perPage,
-        totalPages: 1, // SprintGit search might not support pagination yet
+        totalPages: 1,
       });
     }
 

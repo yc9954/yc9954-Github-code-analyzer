@@ -1,5 +1,5 @@
 // API configuration for backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.sprintgit.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'https://api.sprintgit.com';
 
 // Token management
 const getAuthToken = (): string | null => {
@@ -40,119 +40,166 @@ let currentRateLimit = {
 export const getRateLimit = () => currentRateLimit;
 
 // Helper function to make authenticated API calls
+// Health Check Function
+export async function checkHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/health`);
+    if (response.ok) {
+      const data = await response.json();
+      return (data.status === 'success' || data.status === 200);
+    }
+    return false;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return false;
+  }
+}
+
+// Helper function to make authenticated API calls with Retry and Health Check
 async function apiCall<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retries = 5,
+  delay = 1000
 ): Promise<T> {
   const token = getAuthToken();
   const isRefreshEndpoint = endpoint.includes('/api/auth/refresh');
+  const isHealthEndpoint = endpoint.includes('/api/health');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
 
-  // Don't send the expired access token to the refresh endpoint
-  if (token && !isRefreshEndpoint) {
+  // Don't send the expired access token to the refresh endpoint or health check
+  if (token && !isRefreshEndpoint && !isHealthEndpoint) {
     headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    console.debug('[apiCall] Warning: No token found for request to', endpoint);
   }
 
-  console.log(`[apiCall] Requesting ${endpoint}`, { headers }); // Debug log
+  console.log(`[apiCall] Requesting ${endpoint} (Attempts left: ${retries})`, { headers });
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  // Capture Rate Limit Headers
-  const limit = response.headers.get('X-RateLimit-Limit');
-  const remaining = response.headers.get('X-RateLimit-Remaining');
-  const reset = response.headers.get('X-RateLimit-Reset');
+    // Capture Rate Limit Headers
+    const limit = response.headers.get('X-RateLimit-Limit');
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const reset = response.headers.get('X-RateLimit-Reset');
 
-  if (limit && remaining && reset) {
-    currentRateLimit = {
-      limit: parseInt(limit, 10),
-      remaining: parseInt(remaining, 10),
-      reset: parseInt(reset, 10) * 1000,
-    };
-  }
-
-  if (!response.ok) {
-    if (response.status === 401 && !isRefreshEndpoint) {
-      // Token may be expired, try refreshing
-      const refreshTokenValue = localStorage.getItem('refreshToken');
-
-      if (!refreshTokenValue) {
-        // No refresh token, force logout
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
-      }
-
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          console.log('Token expired, attempting refresh...');
-          const newTokens = await refreshToken(refreshTokenValue);
-          isRefreshing = false;
-          onTokenRefreshed(newTokens.accessToken);
-        } catch (error) {
-          console.error('Refresh failed, logging out');
-          onTokenRefreshFailed();
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
-        }
-      }
-
-      // Wait for token refresh and retry
-      return new Promise<T>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('인증 토큰 갱신 시간 초과'));
-        }, 15000);
-
-        subscribeTokenRefresh(async (newToken: string) => {
-          clearTimeout(timeout);
-          try {
-            headers['Authorization'] = `Bearer ${newToken}`;
-            const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
-              ...options,
-              headers,
-            });
-
-            if (!retryResponse.ok) {
-              const retryError = await retryResponse.json().catch(() => ({}));
-              throw new Error(retryError.message || `Retry failed with status: ${retryResponse.status}`);
-            }
-
-            const data = await retryResponse.json();
-            if (data.status === 'success' || (data.status && data.data !== undefined)) {
-              resolve(data.data as T);
-            } else {
-              resolve(data as T);
-            }
-          } catch (err) {
-            reject(err);
-          }
-        });
-      });
+    if (limit && remaining && reset) {
+      currentRateLimit = {
+        limit: parseInt(limit, 10),
+        remaining: parseInt(remaining, 10),
+        reset: parseInt(reset, 10) * 1000,
+      };
     }
 
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    if (!response.ok) {
+      // 401 Unauthorized handling (Refresh Token Logic) - Do NOT retry this loop
+      if (response.status === 401 && !isRefreshEndpoint) {
+        const refreshTokenValue = localStorage.getItem('refreshToken');
+
+        if (!refreshTokenValue) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          if (typeof window !== 'undefined') window.location.href = '/login';
+          throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
+        }
+
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            console.log('Token expired, attempting refresh...');
+            const newTokens = await refreshToken(refreshTokenValue);
+            isRefreshing = false;
+            onTokenRefreshed(newTokens.accessToken);
+          } catch (error) {
+            console.error('Refresh failed, logging out');
+            onTokenRefreshFailed();
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            if (typeof window !== 'undefined') window.location.href = '/login';
+            throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
+          }
+        }
+
+        return new Promise<T>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            if (typeof window !== 'undefined') window.location.href = '/login';
+            reject(new Error('인증 토큰 갱신 시간 초과'));
+          }, 15000);
+
+          subscribeTokenRefresh(async (newToken: string) => {
+            clearTimeout(timeout);
+            try {
+              // Retry the call ONCE with new token, do not recurse deeply
+              headers['Authorization'] = `Bearer ${newToken}`;
+              const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers,
+              });
+              if (!retryResponse.ok) {
+                if (retryResponse.status === 401) {
+                  if (typeof window !== 'undefined') window.location.href = '/login';
+                }
+                const retryError = await retryResponse.json().catch(() => ({}));
+                throw new Error(retryError.message || `Retry failed with status: ${retryResponse.status}`);
+              }
+              const data = await retryResponse.json();
+              if (data.status === 'success' || (data.status && data.data !== undefined)) {
+                resolve(data.data as T);
+              } else {
+                resolve(data as T);
+              }
+            } catch (err) {
+              reject(err);
+            }
+          });
+        });
+      }
+
+      // If 5xx error or other error, fallback to normal error handling in this iteration
+      // Check if we should retry based on status code (only for 5xx or network errors)
+      if (response.status >= 500 && retries > 0) {
+        throw new Error(`Server error: ${response.status}`); // Throw to catch block for retry
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const status = data.status?.toLowerCase();
+    if ((status === 'success' || status === 'ok') && data.data !== undefined) {
+      return data.data as T;
+    }
+    return data as T;
+
+  } catch (error: any) {
+    // Retry Logic
+    if (retries > 0 && !isRefreshEndpoint && !isHealthEndpoint) {
+      console.warn(`[apiCall] Request failed, retrying in ${delay}ms...`, error);
+      await new Promise(res => setTimeout(res, delay));
+      return apiCall<T>(endpoint, options, retries - 1, delay * 1.5); // Exponential backoff
+    }
+
+    // After all retries failed, check Server Health
+    if (!isHealthEndpoint && !isRefreshEndpoint) {
+      console.error("All retries failed. Checking system health...");
+      // const isHealthy = await checkHealth();
+      // if (!isHealthy) {
+      //   console.error("System is unhealthy. Redirecting to server-error.");
+      //   window.location.href = '/server-error'; // Force redirect
+      //   // Throwing a promise validation error to stop further execution flow in UI
+      //   throw new Error("System Unavailable");
+      // }
+    }
+
+    throw error;
   }
-
-  const data = await response.json();
-
-  // Handle ApiResponse wrapper
-  const status = data.status?.toLowerCase();
-  if ((status === 'success' || status === 'ok') && data.data !== undefined) {
-    return data.data as T;
-  }
-
-  return data as T;
 }
 
 // ==================== Interfaces ====================
@@ -168,6 +215,7 @@ export interface Repository {
   forks?: number;
   updated: string;
   isArchived?: boolean;
+  isPrivate?: boolean;
   reponame?: string;
   repoUrl?: string;
   size?: number;
@@ -239,7 +287,7 @@ export interface Commit {
   additions?: number;
   deletions?: number;
   files?: number;
-  analysisStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  analysisStatus?: 'PENDING' | 'IN_PROGRESS' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   totalScore?: number;
 }
 
@@ -258,12 +306,12 @@ export interface ChatResponse {
   message: string;
 }
 
-export interface CommitAnalysisResponse {
+export interface CommitAnalysis {
   sha: string;
   message: string;
   committedAt: string;
   authorName: string;
-  analysisStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  analysisStatus: 'PENDING' | 'IN_PROGRESS' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   totalScore: number;
   commitMessageQuality?: number;
   codeQuality?: number;
@@ -283,6 +331,8 @@ export interface CommitAnalysisResponse {
   riskLevel?: 'LOW' | 'MED' | 'HIGH';
   analysisReason?: string;
 }
+
+export type AnalysisStatus = 'PENDING' | 'IN_PROGRESS' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface RepoMetrics {
   commitCount: number;
@@ -434,42 +484,28 @@ export async function getUserRepositories(): Promise<Repository[]> {
 }
 
 /**
- * Get repository branches (using GitHub API directly for now)
- * Note: Backend doesn't have a branches endpoint, so we'll need to use GitHub API
- * or add this endpoint to the backend
+ * Get repository branches
  */
 export async function getRepositoryBranches(
-  owner: string,
-  repo: string
+  repoId: string
 ): Promise<Branch[]> {
   try {
-    // For now, we'll try to get branches from GitHub API
-    // In the future, this should be added to the backend API
-    const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
-    const headers: HeadersInit = {
-      'Accept': 'application/vnd.github.v3+json',
-    };
+    // repoId is the actual DB ID (e.g., "R_kgDOHpMnag")
+    const data = await apiCall<Array<{
+      name: string;
+      lastCommitSha: string;
+      commitCount: number;
+    }>>(`/api/repos/${encodeURIComponent(repoId)}/branches`);
 
-    if (githubToken) {
-      headers['Authorization'] = `token ${githubToken}`;
+    if (!Array.isArray(data)) {
+      console.warn('Branches response is not an array:', data);
+      return [{ name: 'main', commits: 0, lastCommit: 'Unknown' }];
     }
 
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/branches`,
-      { headers }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch branches');
-    }
-
-    const branches = await response.json();
-
-    // Get commit count for each branch (simplified - just return branch names)
-    return branches.map((branch: any) => ({
+    return data.map((branch: any) => ({
       name: branch.name,
-      commits: 0, // Will be populated if needed
-      lastCommit: branch.commit?.commit?.committer?.date || 'Unknown',
+      commits: branch.commitCount || 0,
+      lastCommit: branch.lastCommitSha || 'Unknown',
     }));
   } catch (error) {
     console.error('Error fetching branches:', error);
@@ -483,23 +519,20 @@ export async function getRepositoryBranches(
  * Get repository commits
  */
 export async function getRepositoryCommits(
-  owner: string,
-  repo: string,
+  repoId: string,
   branch: string = 'main',
   page: number = 1,
   perPage: number = 20
 ): Promise<Commit[]> {
   try {
-    // repoId format: owner/repo
-    const repoId = `${owner}/${repo}`;
-
+    // repoId is the actual DB ID
     const data = await apiCall<Array<{
       sha: string;
       message: string;
       committedAt: string;
       authorName: string;
       authorProfileUrl?: string;
-      analysisStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+      analysisStatus?: 'PENDING' | 'IN_PROGRESS' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
       totalScore?: number;
     }>>(`/api/repos/${encodeURIComponent(repoId)}/commits`);
 
@@ -527,14 +560,12 @@ export async function getRepositoryCommits(
  * Get commit analysis result
  */
 export async function getCommitAnalysis(
-  owner: string,
-  repo: string,
+  repoId: string,
   sha: string
-): Promise<CommitAnalysisResponse | null> {
+): Promise<CommitAnalysis | null> {
   try {
-    const repoId = `${owner}/${repo}`;
-    const data = await apiCall<CommitAnalysisResponse>(
-      `/api/repos/${encodeURIComponent(repoId)}/commits/${sha}/analysis`
+    const data = await apiCall<CommitAnalysis>(
+      `/api/repos/${repoId}/commits/${sha}/analysis`
     );
     return data;
   } catch (error) {
@@ -558,56 +589,18 @@ export async function sendChatMessage(
   repo?: string
 ): Promise<ChatResponse> {
   try {
-    const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
-
-    // If a specific commit is selected, get its analysis
-    if (selectedCommit && owner && repo) {
-      const analysis = await getCommitAnalysis(owner, repo, selectedCommit);
-
-      if (analysis) {
-        // Format the analysis as a response
-        let response = `## 커밋 분석 결과 (${selectedCommit.substring(0, 7)})\n\n`;
-        response += `**총점: ${analysis.totalScore}/100**\n\n`;
-
-        if (analysis.summary) {
-          response += `### 요약\n${analysis.summary}\n\n`;
-        }
-
-        if (analysis.strengths) {
-          response += `### 좋은 점\n${analysis.strengths}\n\n`;
-        }
-
-        if (analysis.issues) {
-          response += `### 개선이 필요한 부분\n${analysis.issues}\n\n`;
-        }
-
-        if (analysis.suggestedNextCommit) {
-          response += `### 다음 커밋 제안\n${analysis.suggestedNextCommit}\n\n`;
-        }
-
-        if (analysis.riskLevel) {
-          response += `**위험도: ${analysis.riskLevel}**\n\n`;
-        }
-
-        return { message: response };
-      } else {
-        return {
-          message: `커밋 ${selectedCommit.substring(0, 7)}의 분석 결과를 불러올 수 없습니다. 분석이 진행 중이거나 아직 완료되지 않았을 수 있습니다.`,
-        };
-      }
-    }
-
-    // For general questions about commits, we'll need a backend chat endpoint
-    // For now, return a helpful message
-    if (commits && commits.length > 0) {
-      return {
-        message: `현재 ${commits.length}개의 커밋이 있습니다. 특정 커밋을 선택하면 해당 커밋의 상세 분석을 볼 수 있습니다.\n\n백엔드에 채팅 엔드포인트가 추가되면 더 자세한 답변을 제공할 수 있습니다.`,
-      };
-    }
-
-    return {
-      message: `커밋을 선택하거나 레포지토리를 먼저 선택해주세요.`,
+    const payload = {
+      messages,
+      commits,
+      selectedCommit,
+      owner,
+      repo
     };
+
+    return await apiCall('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   } catch (error: any) {
     console.error('Error sending chat message:', error);
     throw error;
@@ -619,15 +612,14 @@ export async function sendChatMessage(
 /**
  * Trigger repository sync
  */
-export async function syncRepository(owner: string, repo: string): Promise<void> {
+export async function syncRepository(repoId: string): Promise<void> {
   try {
-    const repoId = `${owner}/${repo}`;
     await apiCall(`/api/repos/${encodeURIComponent(repoId)}/sync`, {
       method: 'POST',
     });
     console.log(`Sync triggered for ${repoId}`);
   } catch (error) {
-    console.error(`Error syncing repository ${owner}/${repo}:`, error);
+    console.error(`Error syncing repository ${repoId}:`, error);
   }
 }
 
@@ -725,6 +717,44 @@ export async function getSprints(): Promise<Sprint[]> {
     }));
   } catch (error) {
     console.error('Error fetching sprints:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a single sprint by ID
+ */
+export async function getSprint(sprintId: string): Promise<Sprint> {
+  try {
+    const data = await apiCall<{
+      id: string;
+      name: string;
+      startDate: string;
+      endDate: string;
+      description?: string;
+      managerName?: string;
+      isPrivate: boolean;
+      isOpen: boolean;
+      teamsCount?: number;
+      participantsCount?: number;
+      status?: string;
+    }>(`/api/sprints/${sprintId}`);
+
+    return {
+      id: data.id,
+      name: data.name,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      description: data.description,
+      managerName: data.managerName,
+      isPrivate: data.isPrivate,
+      isOpen: data.isOpen,
+      teamsCount: data.teamsCount,
+      participantsCount: data.participantsCount,
+      status: data.status,
+    };
+  } catch (error) {
+    console.error(`Error fetching sprint ${sprintId}:`, error);
     throw error;
   }
 }
@@ -1533,6 +1563,60 @@ export async function getAvailableTeamRepos(teamId: string): Promise<TeamRepo[]>
     throw error;
   }
 }
+
+
+export interface CommitActivity {
+  sha: string;
+  message: string;
+  committedAt: string;
+  authorName: string;
+  authorProfileUrl?: string;
+  analysisStatus: 'PENDING' | 'IN_PROGRESS' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  totalScore: number;
+}
+
+export async function getRepositoryCommitActivities(repoId: string): Promise<CommitActivity[]> {
+  try {
+    const data = await apiCall<{ data: CommitActivity[] } | CommitActivity[]>(`/api/repos/${repoId}/commits/activities`);
+    if (Array.isArray(data)) {
+      return data;
+    }
+    // Handle wrapped response
+    if (data && 'data' in data && Array.isArray((data as any).data)) {
+      return (data as any).data;
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching commit activities:', error);
+    return [];
+  }
+}
+
+export async function getCommitAnalysisStatus(repoId: string, sha: string): Promise<AnalysisStatus> {
+  const result = await apiCall<{ data: AnalysisStatus } | AnalysisStatus>(`/api/repos/${repoId}/commits/${sha}/status`);
+  // Handle wrapper if present
+  if (typeof result === 'object' && result !== null && 'data' in result) {
+    return (result as any).data;
+  }
+  return result as AnalysisStatus;
+}
+
+// Integrated Search
+export interface SearchResult {
+  users?: User[];
+  repositories?: Repository[];
+  teams?: Team[];
+  total?: number;
+}
+
+export async function searchResources(
+  query: string,
+  type: 'ALL' | 'USER' | 'REPOSITORY' | 'TEAM' = 'ALL'
+): Promise<SearchResult> {
+  return apiCall<SearchResult>(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
+}
+
+
 
 /**
  * Add a repository to a team

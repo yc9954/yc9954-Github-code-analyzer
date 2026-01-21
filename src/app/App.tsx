@@ -10,6 +10,7 @@ import { SettingsPage } from "@/app/pages/SettingsPage";
 import { SearchPage } from "@/app/pages/SearchPage";
 import { TeamPage } from "@/app/pages/TeamPage";
 import { TeamDetailPage } from "@/app/pages/TeamDetailPage";
+import { ServerDownPage } from "@/app/pages/ServerDownPage";
 import { UserProvider } from "@/app/contexts/UserContext";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/teams" element={<TeamPage />} />
           <Route path="/teams/:teamId" element={<TeamDetailPage />} />
+          <Route path="/server-error" element={<ServerDownPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </UserProvider>
