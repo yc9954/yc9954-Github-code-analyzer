@@ -691,7 +691,12 @@ export async function syncRepository(repoId: string): Promise<void> {
  * Get repository details
  */
 export async function getRepositoryDetails(repoId: string): Promise<RepositoryDetails> {
-  return await apiCall(`/api/repos/${encodeURIComponent(repoId)}`);
+  const result = await apiCall<{ data: RepositoryDetails } | RepositoryDetails>(`/api/repos/${encodeURIComponent(repoId)}`);
+  // Handle wrapped response
+  if (typeof result === 'object' && result !== null && 'data' in result) {
+    return (result as any).data;
+  }
+  return result as RepositoryDetails;
 }
 
 
@@ -700,15 +705,12 @@ export async function getRepositoryDetails(repoId: string): Promise<RepositoryDe
  */
 export async function getRepoMetrics(repoId: string): Promise<RepoMetrics | null> {
   try {
-    // repoId corresponds to 'reponame' (owner/repo) from TeamRepo
-    // We encode it because the backend route is /api/repos/[...repoId]/metrics
-    // But we need to pass it properly.
-    // Frontend route: /api/repos/owner/repo/metrics
-    // encodeURIComponent(repoId) would enable passing slashes in one segment if the backend expects it.
-    // However, the Next.js catch-all route [...repoId] will capture 'owner/repo' as ['owner', 'repo'].
-    // So we can just pass the path.
-    const data = await apiCall<RepoMetrics>(`/api/repos/${repoId}/metrics`);
-    return data;
+    const data = await apiCall<{ data: RepoMetrics } | RepoMetrics>(`/api/repos/${repoId}/metrics`);
+    // Handle wrapped response
+    if (typeof data === 'object' && data !== null && 'data' in data) {
+      return (data as any).data;
+    }
+    return data as RepoMetrics;
   } catch (error) {
     console.error(`Error fetching metrics for ${repoId}:`, error);
     return null;
@@ -739,6 +741,8 @@ export interface SprintRanking {
     score: number;
     commits: number;
     members: number;
+    isPublic?: boolean;
+    repoUrl?: string;
   };
   user?: {
     userId: number;
@@ -962,6 +966,8 @@ export async function getSprintRankings(
         commits: number;
         memberCount: number;
         members?: number;
+        isPublic?: boolean;
+        repoUrl?: string;
       }>>(`/api/sprints/${sprintId}/ranking?type=TEAM`);
 
       if (!response || !Array.isArray(response)) {
@@ -976,7 +982,9 @@ export async function getSprintRankings(
           name: item.teamName || item.name || "Unknown Team",
           score: item.score || 0,
           commits: item.commits || 0,
-          members: item.memberCount || item.members || 0
+          members: item.memberCount || item.members || 0,
+          isPublic: item.isPublic,
+          repoUrl: item.repoUrl
         },
       }));
     }
@@ -1100,6 +1108,8 @@ export interface SprintRegistration {
   repoId: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'BANNED';
   registeredAt: string;
+  isPublic?: boolean;
+  repoUrl?: string;
 }
 
 /**
@@ -1234,6 +1244,7 @@ export async function getCommitRankings(
 export interface UserResponse {
   id: number;
   username: string;
+  name?: string;
   email: string;
   notifyEmail?: string;
   notifySprint?: boolean;
@@ -1243,6 +1254,7 @@ export interface UserResponse {
   publicRepos?: number;
   company?: string;
   createdAt: string;
+  joinedAt?: string;
 }
 
 export interface UserUpdateRequest {
@@ -1325,6 +1337,11 @@ export interface UserProfileResponse {
     participantsCount: number;
     status: 'active' | 'completed';
   }>;
+  name?: string;
+  joinedAt?: string;
+  email?: string;
+  bio?: string;
+  location?: string;
 }
 
 export async function getUserProfile(username: string): Promise<UserProfileResponse> {
@@ -1705,7 +1722,14 @@ export async function getRepositoryMetrics(repoId: string): Promise<RepoMetrics 
  */
 export async function getRepositoryContributors(repoId: string): Promise<Contributor[]> {
   try {
-    return await apiCall<Contributor[]>(`/api/repos/${repoId}/contributors`);
+    const data = await apiCall<{ data: Contributor[] } | Contributor[]>(`/api/repos/${repoId}/contributors`);
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (typeof data === 'object' && data !== null && 'data' in data && Array.isArray((data as any).data)) {
+      return (data as any).data;
+    }
+    return [];
   } catch (error) {
     console.error('Error fetching repository contributors:', error);
     return [];

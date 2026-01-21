@@ -41,7 +41,9 @@ export function CommitsPage() {
   // Analysis State
   const [analysis, setAnalysis] = useState<CommitAnalysis | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "analysis">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "analysis">(
+    searchParams.get("branch") === "total" ? "analysis" : "chat"
+  );
   const [repositoryDetails, setRepositoryDetails] = useState<RepositoryDetails | null>(null);
   const [loadingRepositoryDetails, setLoadingRepositoryDetails] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -615,19 +617,102 @@ export function CommitsPage() {
             </div>
 
             {/* Repo Stats Widget */}
-            <div className="border-t border-[#30363d] bg-[#0d1117] overflow-y-auto max-h-48">
+            <div className="border-t border-[#30363d] bg-[#0d1117] overflow-y-auto max-h-64">
               <div className="p-3">
-                <div className="px-2 py-1.5 mb-2">
-                  <h3 className="text-xs font-medium text-white">Repository Stats</h3>
+                <div className="px-2 py-1.5 mb-2 flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-white">Repository Analysis</h3>
+                  {repositoryDetails?.metrics?.averageScore !== undefined && (
+                    <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/30 text-[#7aa2f7] bg-[#7aa2f7]/5">
+                      Score: {repositoryDetails.metrics.averageScore.toFixed(1)}
+                    </Badge>
+                  )}
                 </div>
-                <div className="space-y-1.5">
-                  {languageData.map((lang) => (
-                    <div key={lang.name} className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: lang.color }}></div>
-                      <span className="text-xs text-white flex-1 min-w-0 truncate">{lang.name}</span>
-                      <span className="text-xs text-white/60 tabular-nums">{lang.percentage}%</span>
+
+                {/* Analysis Metrics */}
+                <div className="px-2 space-y-3 mb-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-white/50 uppercase tracking-wider">
+                      <span>Analysis Coverage</span>
+                      <span className="text-white">
+                        {commits.length > 0
+                          ? Math.round((commits.filter(c => c.analysisStatus === 'COMPLETED').length / commits.length) * 100)
+                          : 0}%
+                      </span>
                     </div>
-                  ))}
+                    <div className="w-full bg-white/5 rounded-full h-1">
+                      <div
+                        className="bg-[#7aa2f7] h-1 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${commits.length > 0
+                            ? Math.round((commits.filter(c => c.analysisStatus === 'COMPLETED').length / commits.length) * 100)
+                            : 0}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/5 rounded p-1.5 border border-white/5">
+                      <div className="text-[8px] text-white/40 uppercase">Total Commits</div>
+                      <div className="text-xs font-semibold text-white">{repositoryDetails?.metrics?.commitCount || commits.length}</div>
+                    </div>
+                    <div className="bg-white/5 rounded p-1.5 border border-white/5">
+                      <div className="text-[8px] text-white/40 uppercase">Avg Score</div>
+                      <div className="text-xs font-semibold text-white">{repositoryDetails?.metrics?.averageScore?.toFixed(1) || '0.0'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Languages Distribution */}
+                <div className="px-2 py-1.5 mb-1.5">
+                  <h4 className="text-[10px] font-medium text-white/40 uppercase tracking-widest">Languages</h4>
+                </div>
+                <div className="space-y-1.5 px-2">
+                  {repositoryDetails?.languages && Object.keys(repositoryDetails.languages).length > 0 ? (
+                    Object.entries(repositoryDetails.languages)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 5)
+                      .map(([lang, bytes]) => {
+                        const total = Object.values(repositoryDetails.languages!).reduce((sum, val) => sum + val, 0);
+                        const percentage = ((bytes / total) * 100).toFixed(1);
+                        const colors: Record<string, string> = {
+                          'TypeScript': '#3178c6',
+                          'JavaScript': '#f7df1e',
+                          'Python': '#3776ab',
+                          'CSS': '#1572b6',
+                          'HTML': '#e34c26',
+                          'Java': '#b07219',
+                          'C#': '#178600',
+                          'C++': '#f34b7d',
+                          'C': '#555555',
+                          'Go': '#00ADD8',
+                          'Rust': '#dea584',
+                          'PHP': '#4F5D95',
+                          'Ruby': '#701516',
+                          'Swift': '#ffac45',
+                          'Kotlin': '#F18E33',
+                          'Dart': '#00B4AB',
+                          'Vue': '#41b883',
+                          'React': '#61dafb',
+                          'Svelte': '#ff3e00'
+                        };
+                        return (
+                          <div key={lang} className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: colors[lang] || '#7d8590' }}></div>
+                            <span className="text-[11px] text-white/80 flex-1 min-w-0 truncate">{lang}</span>
+                            <span className="text-[10px] text-white/40 tabular-nums">{percentage}%</span>
+                          </div>
+                        );
+                      })
+                  ) : (
+                    languageData.map((lang) => (
+                      <div key={lang.name} className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: lang.color }}></div>
+                        <span className="text-[11px] text-white/80 flex-1 min-w-0 truncate">{lang.name}</span>
+                        <span className="text-[10px] text-white/40 tabular-nums">{lang.percentage}%</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

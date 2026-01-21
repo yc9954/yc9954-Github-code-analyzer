@@ -152,7 +152,11 @@ export function TeamDetailPage() {
     const handleUpdateTeam = async () => {
         if (!teamId) return;
         try {
-            await updateTeam(teamId, editForm);
+            const normalizedName = editForm.name.trim().toLowerCase().replace(/\s+/g, '_');
+            await updateTeam(teamId, {
+                ...editForm,
+                name: normalizedName
+            });
             alert("Team updated successfully!");
             setIsEditOpen(false);
             loadData();
@@ -518,8 +522,11 @@ export function TeamDetailPage() {
                                                         <AvatarImage src={member.profileUrl || defaultAvatar} />
                                                         <AvatarFallback className="bg-neutral-800 text-white text-xs">{member.username.substring(0, 2).toUpperCase()}</AvatarFallback>
                                                     </Avatar>
-                                                    <div>
-                                                        <div className="text-white font-medium text-sm flex items-center gap-2">
+                                                    <div
+                                                        className="cursor-pointer group/user"
+                                                        onClick={() => navigate(`/users/${member.username}`)}
+                                                    >
+                                                        <div className="text-white font-medium text-sm flex items-center gap-2 group-hover/user:text-blue-400 transition-colors">
                                                             {member.username}
                                                             {member.status?.toUpperCase() === 'PENDING' && <Badge variant="secondary" className="text-[10px] h-4 px-1">Pending</Badge>}
                                                         </div>

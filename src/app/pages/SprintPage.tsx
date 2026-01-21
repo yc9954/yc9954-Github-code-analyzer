@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import {
   getSprints,
   getSprint,
   getMySprints,
+  getMyTeams,
   getSprintRankings,
   createSprint,
   registerSprint,
@@ -35,7 +36,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/app/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { GitBranch, Search, Filter, Calendar as CalendarIcon, User, Users, Trophy, ChevronRight, Clock, Plus, LayoutGrid, List, MoreHorizontal, CheckCircle2, XCircle, AlertCircle, Sparkles, Clipboard, MessageSquare, TrendingUp, TrendingDown, ChevronDown, X } from "lucide-react";
+import { GitBranch, Search, Filter, Calendar as CalendarIcon, User, Users, Trophy, ChevronRight, Clock, Plus, LayoutGrid, List, MoreHorizontal, CheckCircle2, XCircle, AlertCircle, Sparkles, Clipboard, MessageSquare, TrendingUp, TrendingDown, ChevronDown, X, ExternalLink } from "lucide-react";
 import { FaGithub, FaTrophy, FaMedal, FaRegCopy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Progress } from "@/app/components/ui/progress";
@@ -252,6 +253,7 @@ const CalendarWithRangePresets = ({
 
 export function SprintPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const selectedSprint = searchParams.get("sprintId");
   const viewMode = (searchParams.get("mode") as "list" | "participate" | "ranking" | "create" | "manage") || "list";
@@ -284,6 +286,7 @@ export function SprintPage() {
 
   // Team-based registration state
   const [leaderTeams, setLeaderTeams] = useState<(TeamDetailResponse & { repoCount?: number })[]>([]);
+  const [myAllTeams, setMyAllTeams] = useState<TeamDetailResponse[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [teamRepos, setTeamRepos] = useState<TeamRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
@@ -350,8 +353,9 @@ export function SprintPage() {
     }
 
     try {
+      const normalizedName = createForm.name.trim().toLowerCase().replace(/\s+/g, '_');
       await createSprint({
-        name: createForm.name,
+        name: normalizedName,
         description: createForm.description,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
@@ -374,8 +378,9 @@ export function SprintPage() {
     if (!selectedSprint || !currentUser) return;
     setIsUpdating(true);
     try {
+      const normalizedName = createForm.name.trim().toLowerCase().replace(/\s+/g, '_');
       await updateSprint(selectedSprint, {
-        name: createForm.name,
+        name: normalizedName,
         description: createForm.description,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
@@ -456,12 +461,20 @@ export function SprintPage() {
   const [currentUser, setCurrentUser] = useState<UserResponse | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+
   // Load leader teams when entering participate mode
   useEffect(() => {
     if (viewMode === 'participate') {
       setLoadingTeams(true);
-      getLeaderTeams()
-        .then(async (teams) => {
+
+      Promise.all([
+        getLeaderTeams(),
+        getMyTeams() // Fetch all teams I'm in
+      ])
+        .then(async ([leaderData, allData]) => {
+          setMyAllTeams(allData || []); // Store all teams I'm in
+
+          const teams = leaderData;
           // For each team, fetch members and repos to get accurate info
           const enrichedTeams = await Promise.all(
             teams.map(async (team) => {
@@ -1071,7 +1084,12 @@ export function SprintPage() {
                           <div className="flex items-center gap-2 text-sm text-neutral-300 bg-neutral-800/50 px-3 py-1.5 rounded-md border border-neutral-800">
                             <User className="w-4 h-4 text-blue-400" />
                             <span className="text-neutral-500">Manager:</span>
-                            <span className="font-medium">{selectedSprintData.managerName || "Unknown"}</span>
+                            <span
+                              className="font-medium cursor-pointer hover:text-blue-400 transition-colors"
+                              onClick={() => navigate(`/users/${selectedSprintData.managerName}`)}
+                            >
+                              {selectedSprintData.managerName || "Unknown"}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-neutral-300 bg-neutral-800/50 px-3 py-1.5 rounded-md border border-neutral-800">
                             <CalendarIcon className="w-4 h-4 text-green-400" />
@@ -1141,115 +1159,182 @@ export function SprintPage() {
                             Go to Management
                           </Button>
                         </div>
-                      ) : selectedSprintData && (new Date() > new Date(selectedSprintData.endDate)) ? (
-                        <div className="p-8 border border-amber-500/20 rounded-md bg-amber-500/5 text-center space-y-3">
-                          <Clock className="w-10 h-10 text-amber-500 mx-auto opacity-50" />
-                          <div>
-                            <h4 className="text-base font-bold text-white mb-1">Sprint Completed</h4>
-                            <p className="text-xs text-neutral-400 max-w-[300px] mx-auto">
-                              This sprint has ended on {format(new Date(selectedSprintData.endDate), 'yyyy.MM.dd')}.
-                              Registration is no longer available. Viewing results and rankings only.
-                            </p>
-                          </div>
-                          <div className="pt-2">
-                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-                              Completed
-                            </Badge>
-                          </div>
-                        </div>
                       ) : (
-                        <>
-                          <div className="space-y-4">
-                            <div>
-                              <h4 className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Step 1: Select Your Team</h4>
-                              {loadingTeams ? (
-                                <div className="text-sm text-neutral-400 py-4 text-center">Loading teams...</div>
-                              ) : leaderTeams.length === 0 ? (
-                                <div className="text-sm text-neutral-400 py-4 text-center border border-neutral-800 rounded-md bg-neutral-900/50">
-                                  <p className="mb-1 text-xs">You are not a team leader.</p>
-                                  <p className="text-[10px]">Only team leaders can register teams for sprints.</p>
-                                </div>
-                              ) : (
-                                <Select value={selectedTeam || ''} onValueChange={(value) => setSelectedTeam(value)}>
-                                  <SelectTrigger className="bg-black border-neutral-800 text-white h-9 text-sm">
-                                    <SelectValue placeholder="Choose a team" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-neutral-900 border-neutral-800">
-                                    {leaderTeams.map((team) => {
-                                      const isAlreadyRegistered = registrations.some(reg => reg.teamId === team.teamId);
-                                      return (
-                                        <SelectItem
-                                          key={team.teamId}
-                                          value={team.teamId}
-                                          className="text-white text-sm"
-                                          disabled={team.repoCount === 0 || isAlreadyRegistered}
-                                        >
-                                          <div className={`flex items-center justify-between w-full ${team.repoCount === 0 || isAlreadyRegistered ? 'opacity-50' : ''}`}>
-                                            <span>{team.name}</span>
-                                            <span className="text-xs text-neutral-400 ml-2">
-                                              {isAlreadyRegistered ? (
-                                                <span className="text-blue-400 font-medium">Already Registered</span>
-                                              ) : (
-                                                `${team.memberCount || 0} members, ${team.repoCount || 0} repos`
-                                              )}
-                                            </span>
-                                          </div>
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
+                        (() => {
+                          const myRegistration = registrations.find(reg =>
+                            myAllTeams.some(team => team.teamId === reg.teamId)
+                          );
 
-                            {selectedTeam && (
-                              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                <h4 className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Step 2: Select Repository</h4>
-                                {loadingRepos ? (
-                                  <div className="text-sm text-neutral-400 py-4 text-center">Loading repositories...</div>
-                                ) : teamRepos.length === 0 ? (
-                                  <div className="text-sm text-neutral-400 py-4 text-center border border-neutral-800 rounded-md bg-neutral-900/50">
-                                    <p className="mb-1 text-xs">No repositories found.</p>
-                                    <p className="text-[10px]">Add repositories to your team first.</p>
+                          // Try to find ranking info for extra data like repoUrl if missing in registration
+                          const rankingInfo = sprintRankings.find(r => r.team?.teamId === myRegistration?.teamId);
+                          const repoUrl = myRegistration?.repoUrl || rankingInfo?.team?.repoUrl;
+                          const isPublic = myRegistration?.isPublic || rankingInfo?.team?.isPublic;
+
+                          if (myRegistration) {
+                            return (
+                              <div className="p-4 border border-blue-500/20 rounded-md bg-blue-500/5 space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                                      <Sparkles className="w-4 h-4 text-blue-400" />
+                                      Participating
+                                    </h4>
+                                    <p className="text-xs text-neutral-400 mt-1">
+                                      You are participating with <span className="text-white font-medium">{myRegistration.teamName}</span>
+                                    </p>
                                   </div>
-                                ) : (
-                                  <div className="space-y-2 mb-3">
-                                    {teamRepos.map((repo) => (
-                                      <div
-                                        key={repo.id}
-                                        onClick={() => setSelectedRepo(repo.id)}
-                                        className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${selectedRepo === repo.id
-                                          ? 'border-blue-500 bg-blue-500/10'
-                                          : 'border-neutral-800 hover:bg-neutral-800'
-                                          }`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <GitBranch className="w-4 h-4 text-neutral-400" />
-                                          <div>
-                                            <span className="text-sm text-white">{repo.reponame}</span>
-                                          </div>
-                                        </div>
-                                        {selectedRepo === repo.id && (
-                                          <Badge className="bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-2">
-                                            Selected
-                                          </Badge>
-                                        )}
+                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                    {myRegistration.status}
+                                  </Badge>
+                                </div>
+
+                                <div
+                                  className="bg-black/50 border border-neutral-800 rounded p-3 flex items-center justify-between cursor-pointer hover:border-neutral-700 group/team transition-all"
+                                  onClick={() => {
+                                    if (isPublic) {
+                                      navigate(`/teams/${myRegistration.teamId}`);
+                                    } else if (repoUrl) {
+                                      window.open(repoUrl, '_blank');
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-neutral-800 rounded-md">
+                                      <Users className="w-4 h-4 text-neutral-300" />
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium text-white group-hover/team:text-blue-400 transition-colors">
+                                        {myRegistration.teamName}
                                       </div>
-                                    ))}
+                                      <div className="text-[10px] text-neutral-500 flex items-center gap-1">
+                                        {isPublic ? "Public Team" : "Private Team"}
+                                        {repoUrl && <ExternalLink className="w-2 h-2" />}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-neutral-500 group-hover/team:text-white transition-colors">
+                                    View Team →
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (selectedSprintData && (new Date() > new Date(selectedSprintData.endDate))) {
+                            return (
+                              <div className="p-8 border border-amber-500/20 rounded-md bg-amber-500/5 text-center space-y-3">
+                                <Clock className="w-10 h-10 text-amber-500 mx-auto opacity-50" />
+                                <div>
+                                  <h4 className="text-base font-bold text-white mb-1">Sprint Completed</h4>
+                                  <p className="text-xs text-neutral-400 max-w-[300px] mx-auto">
+                                    This sprint has ended on {format(new Date(selectedSprintData.endDate), 'yyyy.MM.dd')}.
+                                    Registration is no longer available. Viewing results and rankings only.
+                                  </p>
+                                </div>
+                                <div className="pt-2">
+                                  <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                                    Completed
+                                  </Badge>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Step 1: Select Your Team</h4>
+                                  {loadingTeams ? (
+                                    <div className="text-sm text-neutral-400 py-4 text-center">Loading teams...</div>
+                                  ) : leaderTeams.length === 0 ? (
+                                    <div className="text-sm text-neutral-400 py-4 text-center border border-neutral-800 rounded-md bg-neutral-900/50">
+                                      <p className="mb-1 text-xs">You are not a team leader.</p>
+                                      <p className="text-[10px]">Only team leaders can register teams for sprints.</p>
+                                    </div>
+                                  ) : (
+                                    <Select value={selectedTeam || ''} onValueChange={(value) => setSelectedTeam(value)}>
+                                      <SelectTrigger className="bg-black border-neutral-800 text-white h-9 text-sm">
+                                        <SelectValue placeholder="Choose a team" />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-neutral-900 border-neutral-800">
+                                        {leaderTeams.map((team) => {
+                                          const isAlreadyRegistered = registrations.some(reg => reg.teamId === team.teamId);
+                                          return (
+                                            <SelectItem
+                                              key={team.teamId}
+                                              value={team.teamId}
+                                              className="text-white text-sm"
+                                              disabled={team.repoCount === 0 || isAlreadyRegistered}
+                                            >
+                                              <div className={`flex items-center justify-between w-full ${team.repoCount === 0 || isAlreadyRegistered ? 'opacity-50' : ''}`}>
+                                                <span>{team.name}</span>
+                                                <span className="text-xs text-neutral-400 ml-2">
+                                                  {isAlreadyRegistered ? (
+                                                    <span className="text-blue-400 font-medium">Already Registered</span>
+                                                  ) : (
+                                                    `${team.memberCount || 0} members, ${team.repoCount || 0} repos`
+                                                  )}
+                                                </span>
+                                              </div>
+                                            </SelectItem>
+                                          );
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
+
+                                {selectedTeam && (
+                                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <h4 className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Step 2: Select Repository</h4>
+                                    {loadingRepos ? (
+                                      <div className="text-sm text-neutral-400 py-4 text-center">Loading repositories...</div>
+                                    ) : teamRepos.length === 0 ? (
+                                      <div className="text-sm text-neutral-400 py-4 text-center border border-neutral-800 rounded-md bg-neutral-900/50">
+                                        <p className="mb-1 text-xs">No repositories found.</p>
+                                        <p className="text-[10px]">Add repositories to your team first.</p>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2 mb-3">
+                                        {teamRepos.map((repo) => (
+                                          <div
+                                            key={repo.id}
+                                            onClick={() => setSelectedRepo(repo.id)}
+                                            className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${selectedRepo === repo.id
+                                              ? 'border-blue-500 bg-blue-500/10'
+                                              : 'border-neutral-800 hover:bg-neutral-800'
+                                              }`}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <GitBranch className="w-4 h-4 text-neutral-400" />
+                                              <div>
+                                                <span className="text-sm text-white">{repo.reponame}</span>
+                                              </div>
+                                            </div>
+                                            {selectedRepo === repo.id && (
+                                              <Badge className="bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-2">
+                                                Selected
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                              </div>
-                            )}
 
-                            <Button
-                              className="w-full bg-blue-500 hover:bg-blue-600 text-white border-0 h-9 text-sm font-medium transition-all"
-                              onClick={onRegisterSprint}
-                              disabled={!selectedTeam || !selectedRepo}
-                            >
-                              {selectedTeam && selectedRepo ? "Register for Sprint" : "Process Registration"}
-                            </Button>
-                          </div>
-                        </>
+                                <Button
+                                  className="w-full bg-blue-500 hover:bg-blue-600 text-white border-0 h-9 text-sm font-medium transition-all"
+                                  onClick={onRegisterSprint}
+                                  disabled={!selectedTeam || !selectedRepo}
+                                >
+                                  {selectedTeam && selectedRepo ? "Register for Sprint" : "Process Registration"}
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        })()
                       )}
                     </div>
 
@@ -1490,9 +1575,21 @@ export function SprintPage() {
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell text-sm py-1>
+                                <TableCell className="text-sm py-1">
                                   <div className="flex items-center gap-2">
-                                    <div className="text-sm font-medium text-white">{item.team?.name || 'Unknown Team'}</div>
+                                    <div
+                                      className="text-sm font-medium text-white hover:text-blue-400 transition-colors"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (item.team?.isPublic) {
+                                          window.location.href = `/teams/${item.team.teamId}`;
+                                        } else if (item.team?.repoUrl) {
+                                          window.open(item.team.repoUrl, '_blank');
+                                        }
+                                      }}
+                                    >
+                                      {item.team?.name || 'Unknown Team'}
+                                    </div>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-white text-sm py-1">{item.team?.score || 0}</TableCell>
@@ -1543,16 +1640,19 @@ export function SprintPage() {
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-sm py-1">
-                                  <div className="flex items-center gap-2">
+                                  <div
+                                    className="flex items-center gap-2 cursor-pointer group/user"
+                                    onClick={() => navigate(`/users/${item.user?.username}`)}
+                                  >
                                     <Avatar className="w-5 h-5 border border-neutral-800">
                                       <AvatarImage src={item.user?.profileUrl || defaultAvatar} />
                                       <AvatarFallback className="bg-neutral-900 text-white text-[10px]">
                                         {item.user?.username?.substring(0, 2).toUpperCase() || "??"}
                                       </AvatarFallback>
                                     </Avatar>
-                                    <div>
-                                      <div className="text-sm font-medium text-white">{item.user?.username || 'Unknown'}</div>
-                                    </div>
+                                    <span className="text-white group-hover/user:text-blue-400 transition-colors font-medium">
+                                      {item.user?.username || "Unknown User"}
+                                    </span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-white text-sm py-1">{item.user?.score || 0}</TableCell>
@@ -1975,6 +2075,6 @@ export function SprintPage() {
         </div>
       </div>
 
-    </DashboardLayout>
+    </DashboardLayout >
   );
 }

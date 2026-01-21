@@ -139,8 +139,9 @@ export function TeamPage() {
         }
 
         try {
+            const normalizedName = createForm.name.trim().toLowerCase().replace(/\s+/g, '_');
             const result = await createTeam({
-                name: createForm.name,
+                name: normalizedName,
                 description: createForm.description,
                 leaderId: userId,
                 isPublic: createForm.isPublic,
