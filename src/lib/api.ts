@@ -649,16 +649,48 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   commits?: Commit[],
   selectedCommit?: string,
-  owner?: string,
-  repo?: string
+  repositoryDetails?: RepositoryDetails | null,
+  analysis?: CommitAnalysis | null
 ): Promise<ChatResponse> {
   try {
+    let systemPrompt = "You are a helpful AI assistant specialized in analyzing code commits.";
+
+    // Generate dynamic system prompt based on context
+    if (selectedCommit && analysis) {
+      systemPrompt += `
+You are analyzing a specific commit (${selectedCommit}).
+Context:
+- Total Score: ${analysis.totalScore || 'N/A'}
+- Code Quality: ${analysis.codeQuality || 'N/A'}
+- Change Appropriateness: ${analysis.changeAppropriateness || 'N/A'}
+- Issues: ${analysis.issues || 'None reported.'}
+
+Please use this analysis data to answer the user's questions about the quality, security, and design of this commit.`;
+    } else if (repositoryDetails) {
+      systemPrompt += `
+You are analyzing the repository "${repositoryDetails.reponame}".
+Context:
+- Description: ${repositoryDetails.description || 'N/A'}
+- Language: ${repositoryDetails.language || 'N/A'}
+- Total Score: ${repositoryDetails.metrics?.totalScore || 'N/A'}
+- Average Score: ${repositoryDetails.metrics?.averageScore || 'N/A'}
+- Commit Count: ${repositoryDetails.metrics?.commitCount || 0}
+
+Please use this repository overview to answer general questions about the project structure and health.`;
+    }
+
     const payload = {
       messages,
-      commits,
-      selectedCommit,
-      owner,
-      repo
+      commits: commits?.map(c => ({
+        sha: c.sha,
+        message: c.message,
+        author: c.author || c.username || 'Unknown',
+        time: c.time,
+        additions: c.additions || 0,
+        deletions: c.deletions || 0
+      })) || [],
+      selectedCommit: selectedCommit || null,
+      systemPrompt: systemPrompt
     };
 
     return await apiCall('/api/chat', {
@@ -1359,6 +1391,17 @@ export async function getMyProfile(): Promise<UserResponse> {
   }
 }
 
+export interface UserUpdateRequest {
+  name?: string;
+  bio?: string;
+  company?: string;
+  location?: string;
+  website?: string;
+  twitter?: string;
+  linkedin?: string;
+  github?: string;
+}
+
 /**
  * Update my profile
  */
@@ -1373,6 +1416,33 @@ export async function updateMyProfile(updates: UserUpdateRequest): Promise<UserR
     console.error('Error updating user profile:', error);
     throw error;
   }
+}
+
+// Public Repository Interface
+export interface PublicRepository {
+  id: string;
+  reponame: string;
+  repoUrl: string;
+  description: string | null;
+  language: string | null;
+  size: number;
+  stars: number;
+  topics: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+  pushedAt: string;
+  lastSyncAt: string;
+  languages: Record<string, number>;
+}
+
+/**
+ * Get public repositories for a specific user
+ */
+export async function getUserPublicRepos(username: string): Promise<PublicRepository[]> {
+  const data = await apiCall<{ data: PublicRepository[] }>(`/api/users/${username}/repos`);
+  // Handle both unwrapped and wrapped responses in case apiCall behavior changes or matches unexpected
+  if (Array.isArray(data)) return data;
+  return data.data || [];
 }
 
 /**
@@ -1691,10 +1761,21 @@ export async function getCommitAnalysisStatus(repoId: string, sha: string): Prom
 }
 
 // Integrated Search
+export interface CommitSearchResult {
+  sha: string;
+  message: string;
+  repoId: string;
+  repoName: string;
+  authorName: string;
+  committedAt: string;
+}
+
 export interface SearchResult {
   users?: User[];
   repositories?: Repository[];
   teams?: Team[];
+  sprints?: Sprint[];
+  commits?: CommitSearchResult[];
   total?: number;
 }
 
@@ -1702,7 +1783,8 @@ export async function searchResources(
   query: string,
   type: 'ALL' | 'USER' | 'REPOSITORY' | 'TEAM' = 'ALL'
 ): Promise<SearchResult> {
-  return apiCall<SearchResult>(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
+  const response = await apiCall<SearchResult>(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
+  return response || { repositories: [], users: [], teams: [], sprints: [], commits: [] };
 }
 
 /**

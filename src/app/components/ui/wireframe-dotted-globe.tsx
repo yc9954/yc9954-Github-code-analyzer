@@ -13,6 +13,7 @@ export interface CustomDot {
   description?: string;
   location?: string;
   date?: string;
+  opacity?: number; // Opacity 0-1
   [key: string]: any; // Allow additional custom properties
 }
 
@@ -23,9 +24,9 @@ interface RotatingEarthProps {
   customDots?: CustomDot[];
 }
 
-export default function RotatingEarth({ 
-  width = 800, 
-  height = 600, 
+export default function RotatingEarth({
+  width = 800,
+  height = 600,
   className = "",
   customDots = []
 }: RotatingEarthProps) {
@@ -40,6 +41,17 @@ export default function RotatingEarth({
   const containerDimensionsRef = useRef<{ width: number; height: number; radius: number } | null>(null);
   const renderCallbackRef = useRef<(() => void) | null>(null);
   const selectedDotRef = useRef<CustomDot | null>(null);
+
+  const dotsRef = useRef<CustomDot[]>(customDots);
+
+  // Update dots ref when prop changes to avoid re-running main effect
+  useEffect(() => {
+    dotsRef.current = customDots;
+    // Trigger a render frame immediately when dots change
+    if (renderCallbackRef.current) {
+      renderCallbackRef.current();
+    }
+  }, [customDots]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -216,8 +228,8 @@ export default function RotatingEarth({
         });
       }
 
-      // Draw custom dots for issues/sprints
-      customDots.forEach((dot) => {
+      // Draw custom dots for issues/sprints (Use Ref!)
+      dotsRef.current.forEach((dot) => {
         const projected = projection([dot.lng, dot.lat] as [number, number]);
         if (
           projected &&
@@ -228,6 +240,10 @@ export default function RotatingEarth({
         ) {
           const dotSize = (dot.size || 6) * scaleFactor;
           const dotColor = dot.color || "#7aa2f7";
+          const opacity = dot.opacity !== undefined ? dot.opacity : 1;
+
+          context.save();
+          context.globalAlpha = opacity;
 
           // Glow effect
           context.shadowBlur = 15 * scaleFactor;
@@ -236,7 +252,8 @@ export default function RotatingEarth({
           context.beginPath();
           context.arc(projected[0], projected[1], dotSize, 0, 2 * Math.PI);
           context.fill();
-          context.shadowBlur = 0;
+
+          context.restore(); // Restore globalAlpha and shadow settings
         }
       });
 
@@ -377,7 +394,8 @@ export default function RotatingEarth({
       let minDistance = Infinity;
       const clickThreshold = 30; // pixels
 
-      customDots.forEach((dot) => {
+      // Use Ref for hit detection!
+      dotsRef.current.forEach((dot) => {
         const projected = projectionRef.current!([dot.lng, dot.lat] as [number, number]);
         if (projected) {
           const distance = Math.sqrt(
@@ -419,7 +437,17 @@ export default function RotatingEarth({
       canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("click", handleClick);
     };
-  }, [width, height, customDots]);
+  }, [width, height]); // REMOVE customDots from dependency array!
+
+  // Update popup position when selectedDot changes or on render
+  useEffect(() => {
+    selectedDotRef.current = selectedDot;
+    if (selectedDot && renderCallbackRef.current) {
+      renderCallbackRef.current();
+    } else if (!selectedDot) {
+      setPopupPosition(null);
+    }
+  }, [selectedDot]);
 
   // Update popup position when selectedDot changes or on render
   useEffect(() => {
@@ -447,8 +475,8 @@ export default function RotatingEarth({
       <canvas
         ref={canvasRef}
         className="w-full h-auto rounded-2xl bg-background dark cursor-pointer"
-        style={{ 
-          maxWidth: "100%", 
+        style={{
+          maxWidth: "100%",
           height: "auto",
           opacity: isVisible ? 1 : 0,
           transition: "opacity 2s cubic-bezier(0.98, 0.02, 0.9, 0.1)"
@@ -484,13 +512,11 @@ export default function RotatingEarth({
           >
             <div className="flex items-start gap-3">
               <div
-                className={`w-3 h-3 rounded-full flex-shrink-0 mt-1 ${
-                  selectedDot.type === "sprint" ? "bg-blue-500" : "bg-orange-500"
-                }`}
+                className={`w-3 h-3 rounded-full flex-shrink-0 mt-1 ${selectedDot.type === "sprint" ? "bg-blue-500" : "bg-orange-500"
+                  }`}
                 style={{
-                  boxShadow: `0 0 10px ${
-                    selectedDot.type === "sprint" ? "rgba(59, 130, 246, 0.5)" : "rgba(251, 146, 60, 0.5)"
-                  }`,
+                  boxShadow: `0 0 10px ${selectedDot.type === "sprint" ? "rgba(59, 130, 246, 0.5)" : "rgba(251, 146, 60, 0.5)"
+                    }`,
                 }}
               />
               <div className="flex-1 space-y-2">
@@ -502,21 +528,21 @@ export default function RotatingEarth({
                     {selectedDot.type === "sprint" ? "Sprint Event" : "Issue Event"}
                   </p>
                 </div>
-                
+
                 {selectedDot.location && (
                   <div className="pt-1 border-t border-white/10">
                     <p className="text-white/80 text-xs font-medium mb-0.5">Location</p>
                     <p className="text-white/60 text-xs">{selectedDot.location}</p>
                   </div>
                 )}
-                
+
                 {selectedDot.date && (
                   <div>
                     <p className="text-white/80 text-xs font-medium mb-0.5">Date</p>
                     <p className="text-white/60 text-xs">{selectedDot.date}</p>
                   </div>
                 )}
-                
+
                 {selectedDot.description && (
                   <div>
                     <p className="text-white/80 text-xs font-medium mb-0.5">Description</p>
@@ -524,7 +550,7 @@ export default function RotatingEarth({
                   </div>
                 )}
               </div>
-              
+
               <button
                 onClick={() => {
                   setSelectedDot(null);

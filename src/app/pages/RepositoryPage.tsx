@@ -88,36 +88,24 @@ export function RepositoryPage() {
     model: string;
     isThinkingEnabled: boolean;
   }) => {
-    console.log('RepositoryPage - handleSendMessage:', {
-      message: data.message,
-      selectedRepo: selectedRepoData,
-      selectedBranch
-    });
+    // Validate selection
+    if (!selectedRepo || !selectedBranch) {
+      alert("Please select a repository and branch first to start a chat.");
+      return;
+    }
 
     if (selectedRepoData && selectedBranch) {
       const owner = selectedRepoData.owner;
       const repo = selectedRepoData.name;
 
-      // URLSearchParams를 사용하여 안전하게 URL 생성 (한글 인코딩 문제 해결)
-      // 각 파라미터를 개별적으로 인코딩하여 안전하게 처리
       const params = new URLSearchParams();
       params.set('owner', owner);
       params.set('repo', repo);
       params.set('branch', selectedBranch);
-      params.set('question', data.message); // URLSearchParams가 자동으로 인코딩
+      params.set('question', data.message);
 
       const url = `/commits?${params.toString()}`;
-      console.log('RepositoryPage - Navigating to:', url);
-      console.log('RepositoryPage - Question (original):', data.message);
-      console.log('RepositoryPage - Question (length):', data.message.length);
-      console.log('RepositoryPage - Question (chars):', data.message.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', '));
-      console.log('RepositoryPage - Question (encoded in URL):', params.get('question'));
-      console.log('RepositoryPage - Full URL:', url);
-
-      // navigate 대신 window.location을 사용하여 URL이 정확히 전달되도록 함
       navigate(url);
-    } else {
-      console.warn('Cannot navigate: missing repo or branch', { selectedRepoData, selectedBranch });
     }
   };
 

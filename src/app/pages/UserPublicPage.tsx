@@ -2,19 +2,19 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
-import { getUserProfile, getUserRepositories, type UserResponse, type Repository, type Sprint } from "@/lib/api";
+import { getUserProfile, getUserPublicRepos, type UserResponse, type PublicRepository, type Sprint } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
-import { Github, FolderGit2, Calendar, LayoutGrid, ChevronRight, Globe, Trophy, ExternalLink, Code } from "lucide-react";
+import { Github, FolderGit2, Calendar, LayoutGrid, ChevronRight, Globe, Trophy, ExternalLink, Code, Star } from "lucide-react";
 import defaultAvatar from "@/assets/38ba5abba51d546a081340d28143511ad0f46c8f.png";
 
 export function UserPublicPage() {
     const { username } = useParams();
     const navigate = useNavigate();
     const [user, setUser] = useState<UserResponse | null>(null);
-    const [repositories, setRepositories] = useState<Repository[]>([]);
+    const [repositories, setRepositories] = useState<PublicRepository[]>([]); // Use PublicRepository Interface
     const [sprints, setSprints] = useState<Sprint[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -28,11 +28,10 @@ export function UserPublicPage() {
         setLoading(true);
         try {
             const profile = await getUserProfile(username!);
-            const allRepos = await getUserRepositories();
+            const publicRepos = await getUserPublicRepos(username!);
 
             setUser(profile as unknown as UserResponse);
-            // Filter repositories by owner username
-            setRepositories(allRepos.filter(r => r.owner === username));
+            setRepositories(publicRepos);
             setSprints((profile.participatingSprints || []) as unknown as Sprint[]);
         } catch (error) {
             console.error("Failed to load user public data:", error);
@@ -123,20 +122,30 @@ export function UserPublicPage() {
                                                     <div className="flex items-start justify-between">
                                                         <div>
                                                             <CardTitle className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
-                                                                {repo.name}
+                                                                {repo.reponame}
                                                             </CardTitle>
                                                             <CardDescription className="mt-1 text-sm text-neutral-400 line-clamp-2">
                                                                 {repo.description || "No description provided."}
                                                             </CardDescription>
                                                         </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="text-neutral-500 hover:text-white"
-                                                            onClick={() => navigate(`/commits?owner=${repo.owner}&repo=${repo.name}&branch=total`)}
-                                                        >
-                                                            <Code className="w-4 h-4" />
-                                                        </Button>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-neutral-500 hover:text-white"
+                                                                onClick={() => window.open(repo.repoUrl, '_blank')}
+                                                            >
+                                                                <ExternalLink className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-neutral-500 hover:text-white"
+                                                                onClick={() => navigate(`/commits?owner=${username}&repo=${repo.reponame}&branch=total`)}
+                                                            >
+                                                                <Code className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </CardHeader>
                                                 <CardContent>
@@ -147,7 +156,11 @@ export function UserPublicPage() {
                                                                 {repo.language}
                                                             </span>
                                                         )}
-                                                        <span>Updated {new Date(repo.updated).toLocaleDateString()}</span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Star className="w-3 h-3" />
+                                                            {repo.stars}
+                                                        </span>
+                                                        <span>Updated {new Date(repo.updatedAt).toLocaleDateString()}</span>
                                                     </div>
                                                 </CardContent>
                                             </Card>

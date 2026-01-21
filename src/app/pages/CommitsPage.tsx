@@ -153,8 +153,8 @@ export function CommitsPage() {
         chatMessages,
         commits,
         selectedCommit || undefined,
-        owner,
-        repoName
+        repositoryDetails,
+        analysis
       );
 
       setChatMessages(prev => [...prev, {
@@ -350,8 +350,8 @@ export function CommitsPage() {
           updatedMessages,
           commits,
           selectedCommit || undefined,
-          owner,
-          repoName
+          repositoryDetails,
+          analysis
         );
 
         setChatMessages(prev => [...prev, {
