@@ -158,7 +158,7 @@ export function SettingsPage() {
                   {/* Notifications Dialog */}
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-7 text-xs px-3 border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white">
+                      <Button size="sm" variant="outline" className="h-7 text-xs px-3 border-neutral-700 text-white hover:bg-neutral-800 hover:text-white bg-neutral-900">
                         Edit Notifications
                       </Button>
                     </DialogTrigger>

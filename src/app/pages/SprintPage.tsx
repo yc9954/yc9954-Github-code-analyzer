@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import {
   getSprints,
@@ -250,6 +250,7 @@ const CalendarWithRangePresets = ({
 };
 
 export function SprintPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const selectedSprint = searchParams.get("sprintId");
@@ -733,6 +734,14 @@ export function SprintPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-base font-semibold text-white">Sprints</h1>
             <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate("/teams")}
+                variant="outline"
+                className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-xs px-3"
+              >
+                <Users className="w-4 h-4 mr-1" />
+                Join Team
+              </Button>
               <Button
                 onClick={() => navigateSprint("ranking", selectedSprint)}
                 variant="outline"

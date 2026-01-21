@@ -236,11 +236,11 @@ export function SearchPage() {
               <aside className="w-48 flex-shrink-0">
                 <div className="sticky top-4 space-y-6">
                 <div>
-                  <h3 className="text-xs font-semibold text-white mb-3">Filter by</h3>
+                  <h3 className="text-sm font-semibold text-white mb-3">Filter by</h3>
                   <div className="space-y-1">
                     <button
                       onClick={() => setActiveFilter("repositories")}
-                      className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "repositories"
                           ? "bg-blue-500 text-white"
                           : "text-white hover:bg-neutral-900"
@@ -248,7 +248,7 @@ export function SearchPage() {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-white">Repositories</span>
-                        <span className={`text-[10px] ${
+                        <span className={`text-xs ${
                           activeFilter === "repositories" 
                             ? "text-white/80" 
                             : "text-neutral-400"
@@ -263,7 +263,7 @@ export function SearchPage() {
                     </button>
                     <button
                       onClick={() => setActiveFilter("discussions")}
-                      className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "discussions"
                           ? "bg-blue-500 text-white"
                           : "text-white hover:bg-neutral-900"
@@ -271,7 +271,7 @@ export function SearchPage() {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-white">Discussions</span>
-                        <span className={`text-[10px] ${
+                        <span className={`text-xs ${
                           activeFilter === "discussions" 
                             ? "text-white/80" 
                             : "text-neutral-400"
@@ -282,7 +282,7 @@ export function SearchPage() {
                     </button>
                     <button
                       onClick={() => setActiveFilter("users")}
-                      className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         activeFilter === "users"
                           ? "bg-blue-500 text-white"
                           : "text-white hover:bg-neutral-900"
@@ -290,7 +290,7 @@ export function SearchPage() {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-white">Users</span>
-                        <span className={`text-[10px] ${
+                        <span className={`text-xs ${
                           activeFilter === "users" 
                             ? "text-white/80" 
                             : "text-neutral-400"
@@ -308,7 +308,7 @@ export function SearchPage() {
 
                 {activeFilter === "repositories" && (
                   <div className="pt-4 border-t border-neutral-900">
-                    <h3 className="text-xs font-semibold text-white mb-3">Languages</h3>
+                    <h3 className="text-sm font-semibold text-white mb-3">Languages</h3>
                     <div className="space-y-1">
                       {languages.map((lang) => (
                         <button
@@ -320,7 +320,7 @@ export function SearchPage() {
                                 : [...prev, lang]
                             );
                           }}
-                          className="w-full text-left px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-2 text-white hover:bg-neutral-900"
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 text-white hover:bg-neutral-900"
                         >
                           <Checkbox
                             checked={selectedLanguages.includes(lang)}
@@ -336,7 +336,7 @@ export function SearchPage() {
                           <span className="text-white">{lang}</span>
                         </button>
                       ))}
-                      <button className="w-full text-left px-3 py-1.5 text-xs text-blue-400 hover:bg-neutral-900 rounded-md">
+                      <button className="w-full text-left px-3 py-1.5 text-sm text-blue-400 hover:bg-neutral-900 rounded-md">
                         More languages...
                       </button>
                     </div>
@@ -344,13 +344,13 @@ export function SearchPage() {
                 )}
 
                 <div className="pt-4 border-t border-neutral-900">
-                  <h3 className="text-xs font-semibold text-white mb-3">Advanced</h3>
+                  <h3 className="text-sm font-semibold text-white mb-3">Advanced</h3>
                   <div className="space-y-2">
-                    <button className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-neutral-900 rounded-md flex items-center justify-between">
+                    <button className="w-full text-left px-3 py-1.5 text-sm text-white hover:bg-neutral-900 rounded-md flex items-center justify-between">
                       <span className="text-white">Owner</span>
                       <ChevronDown className="w-3 h-3 text-white" />
                     </button>
-                    <button className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-neutral-900 rounded-md flex items-center justify-between">
+                    <button className="w-full text-left px-3 py-1.5 text-sm text-white hover:bg-neutral-900 rounded-md flex items-center justify-between">
                       <span className="text-white">Size</span>
                       <ChevronDown className="w-3 h-3 text-white" />
                     </button>

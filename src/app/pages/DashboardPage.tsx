@@ -1,33 +1,86 @@
 import { DashboardLayout } from "@/app/components/DashboardLayout";
-import RotatingEarth from "@/app/components/ui/wireframe-dotted-globe";
-import { useState, useEffect } from "react";
+import RotatingEarth, { type CustomDot } from "@/app/components/ui/wireframe-dotted-globe";
+import { useState, useEffect, useRef } from "react";
 import {
   getMyDashboard,
   getMySprints,
   getMyRecentCommits,
-  searchRepositories,
-  getRateLimit,
   type DashboardStatsResponse,
   type Sprint,
   type Commit
 } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Users, GitBranch, Zap, Activity, BarChart, Ghost, Gauge } from "lucide-react";
 
-// Mock data for sprints and issues locations (latitude, longitude)
-const sprintLocations = [
-  { lat: 37.5665, lng: 126.9780, color: "#7aa2f7", size: 8, type: "sprint" as const, title: "Q1 Sprint Planning", location: "Seoul, South Korea", date: "2024-01-15" },
-  { lat: 40.7128, lng: -74.0060, color: "#7aa2f7", size: 8, type: "sprint" as const, title: "Product Launch Sprint", location: "New York, USA", date: "2024-02-20" },
-  { lat: 51.5074, lng: -0.1278, color: "#7aa2f7", size: 8, type: "sprint" as const, title: "Infrastructure Sprint", location: "London, UK", date: "2024-03-10" },
-  { lat: 35.6762, lng: 139.6503, color: "#7aa2f7", size: 8, type: "sprint" as const, title: "Mobile App Sprint", location: "Tokyo, Japan", date: "2024-04-05" },
+// Major cities coordinates for realistic event locations
+const majorCities = [
+  { lat: 37.5665, lng: 126.9780, name: "Seoul, South Korea" },
+  { lat: 40.7128, lng: -74.0060, name: "New York, USA" },
+  { lat: 51.5074, lng: -0.1278, name: "London, UK" },
+  { lat: 35.6762, lng: 139.6503, name: "Tokyo, Japan" },
+  { lat: 37.7749, lng: -122.4194, name: "San Francisco, USA" },
+  { lat: 52.5200, lng: 13.4050, name: "Berlin, Germany" },
+  { lat: -33.8688, lng: 151.2093, name: "Sydney, Australia" },
+  { lat: 55.7558, lng: 37.6173, name: "Moscow, Russia" },
+  { lat: 39.9042, lng: 116.4074, name: "Beijing, China" },
+  { lat: 19.4326, lng: -99.1332, name: "Mexico City, Mexico" },
+  { lat: -23.5505, lng: -46.6333, name: "São Paulo, Brazil" },
+  { lat: 28.6139, lng: 77.2090, name: "New Delhi, India" },
+  { lat: 25.2048, lng: 55.2708, name: "Dubai, UAE" },
+  { lat: -34.6037, lng: -58.3816, name: "Buenos Aires, Argentina" },
+  { lat: 48.8566, lng: 2.3522, name: "Paris, France" },
+  { lat: 41.9028, lng: 12.4964, name: "Rome, Italy" },
+  { lat: 52.2297, lng: 21.0122, name: "Warsaw, Poland" },
+  { lat: 59.9343, lng: 30.3351, name: "Saint Petersburg, Russia" },
+  { lat: 31.2304, lng: 121.4737, name: "Shanghai, China" },
+  { lat: 1.3521, lng: 103.8198, name: "Singapore" },
 ];
 
-const issueLocations = [
-  { lat: 37.7749, lng: -122.4194, color: "#f0883e", size: 6, type: "issue" as const, title: "Authentication Bug", location: "San Francisco, USA", date: "2024-01-22" },
-  { lat: 52.5200, lng: 13.4050, color: "#f0883e", size: 6, type: "issue" as const, title: "Performance Issue", location: "Berlin, Germany", date: "2024-02-14" },
-  { lat: -33.8688, lng: 151.2093, color: "#f0883e", size: 6, type: "issue" as const, title: "Database Connection Error", location: "Sydney, Australia", date: "2024-03-18" },
+const sprintTitles = [
+  "Q1 Sprint Planning",
+  "Product Launch Sprint",
+  "Infrastructure Sprint",
+  "Mobile App Sprint",
+  "Backend Optimization",
+  "Frontend Redesign",
+  "API Integration",
+  "Security Audit",
+  "Performance Sprint",
+  "Feature Development",
 ];
+
+const issueTitles = [
+  "Authentication Bug",
+  "Performance Issue",
+  "Database Connection Error",
+  "Memory Leak Detected",
+  "API Rate Limit",
+  "Cache Invalidation",
+  "Network Timeout",
+  "Data Sync Error",
+  "UI Rendering Issue",
+  "Security Vulnerability",
+];
+
+// Generate random event
+const generateRandomEvent = (id: string): CustomDot => {
+  const isSprint = Math.random() > 0.5;
+  const city = majorCities[Math.floor(Math.random() * majorCities.length)];
+  const randomOffset = () => (Math.random() - 0.5) * 10; // ±5 degrees random offset
+  
+  return {
+    lat: city.lat + randomOffset(),
+    lng: city.lng + randomOffset(),
+    color: isSprint ? "#7aa2f7" : "#f0883e",
+    size: isSprint ? 8 : 6,
+    type: isSprint ? "sprint" : "issue",
+    title: isSprint 
+      ? sprintTitles[Math.floor(Math.random() * sprintTitles.length)]
+      : issueTitles[Math.floor(Math.random() * issueTitles.length)],
+    location: city.name,
+    date: new Date().toISOString().split('T')[0],
+    id, // Unique identifier for removal
+  };
+};
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -35,20 +88,14 @@ export function DashboardPage() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStatsResponse | null>(null);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // New Stats State
-  const [teamsCount, setTeamsCount] = useState(0);
-  const [ghostUserCount, setGhostUserCount] = useState(0);
-  const [queueDepth, setQueueDepth] = useState(0);
-  const [repoAnalysisPercent, setRepoAnalysisPercent] = useState(0);
-  const [commitAnalysisRate, setCommitAnalysisRate] = useState(0);
-  const [rateLimit, setRateLimit] = useState({ limit: 5000, remaining: 5000 });
+  const [dynamicEvents, setDynamicEvents] = useState<CustomDot[]>([]);
+  const eventIdCounter = useRef(0);
 
   useEffect(() => {
     const updateDimensions = () => {
       setDimensions({
         width: window.innerWidth - 100,
-        height: window.innerHeight - 340, // Adjusted for stats cards height
+        height: window.innerHeight - 200,
       });
     };
 
@@ -61,42 +108,13 @@ export function DashboardPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [stats, mySprints, commits, teamsData] = await Promise.all([
+        const [stats, mySprints] = await Promise.all([
           getMyDashboard(),
           getMySprints(),
-          getMyRecentCommits(),
-          searchRepositories('', undefined, 'updated', 'ALL', 1, 1) // Fetch basic stats via search if possible, or use specific team API if available
         ]);
 
         setDashboardStats(stats);
         setSprints(mySprints);
-
-        // Calculate Stats
-        // 1. Teams
-        // Note: Ideally we use a getMyTeams() API. For now, using what's available or assuming 0 if not returned
-        setTeamsCount(teamsData.teams?.length || 0);
-
-        // 2. Queue Depth (Pending/Processing commits)
-        const pendingCommits = commits.filter(c => c.analysisStatus === 'PENDING' || c.analysisStatus === 'PROCESSING');
-        setQueueDepth(pendingCommits.length);
-
-        // 3. Commit Analysis Rate
-        const analyzedCommits = commits.filter(c => c.analysisStatus === 'COMPLETED');
-        const rate = commits.length > 0 ? Math.round((analyzedCommits.length / commits.length) * 100) : 0;
-        setCommitAnalysisRate(rate);
-
-        // 4. Repo Analysis % (Placeholder logic or derived)
-        // For now, let's use a meaningful placeholder or derived from score
-        setRepoAnalysisPercent(stats.totalScore > 0 ? Math.min(Math.round(stats.totalScore / 10), 100) : 0);
-
-        // 5. Ghost User (Placeholder for now as specific API is missing)
-        setGhostUserCount(0);
-
-        // 6. Rate Limit
-        const limit = getRateLimit();
-        if (limit) {
-          setRateLimit({ limit: limit.limit, remaining: limit.remaining });
-        }
 
       } catch (error: any) {
         console.error('Error loading dashboard data:', error);
@@ -112,25 +130,95 @@ export function DashboardPage() {
     loadDashboardData();
   }, [navigate]);
 
-  const allDots = loading ? [...sprintLocations, ...issueLocations] : [...sprintLocations, ...issueLocations]; // Fallback to mock for visual for now, ideally merge with real sprint locations
+  // Dynamic event generation and removal
+  useEffect(() => {
+    if (loading) return;
+
+    const addRandomEvents = () => {
+      // Random number of events to add (1-3)
+      const numToAdd = Math.floor(Math.random() * 3) + 1;
+      const newEvents: CustomDot[] = [];
+      
+      for (let i = 0; i < numToAdd; i++) {
+        eventIdCounter.current += 1;
+        newEvents.push(generateRandomEvent(`event-${eventIdCounter.current}`));
+      }
+      
+      setDynamicEvents(prev => [...prev, ...newEvents]);
+    };
+
+
+    // Initial events
+    const initialEvents: CustomDot[] = [];
+    for (let i = 0; i < 5; i++) {
+      eventIdCounter.current += 1;
+      initialEvents.push(generateRandomEvent(`event-${eventIdCounter.current}`));
+    }
+    setDynamicEvents(initialEvents);
+
+    // Recursive function to add events at random intervals (3-8 seconds)
+    let addTimeoutId: NodeJS.Timeout;
+    const scheduleAddEvent = () => {
+      const delay = Math.random() * 5000 + 3000; // 3-8 seconds
+      addTimeoutId = setTimeout(() => {
+        if (Math.random() > 0.3) { // 70% chance to add
+          addRandomEvents();
+        }
+        scheduleAddEvent(); // Schedule next addition
+      }, delay);
+    };
+
+    // Recursive function to remove events at random intervals (4-10 seconds)
+    let removeTimeoutId: NodeJS.Timeout;
+    const scheduleRemoveEvent = () => {
+      const delay = Math.random() * 6000 + 4000; // 4-10 seconds
+      removeTimeoutId = setTimeout(() => {
+        setDynamicEvents(prev => {
+          if (prev.length === 0) {
+            scheduleRemoveEvent(); // Schedule next removal attempt
+            return prev;
+          }
+          if (Math.random() > 0.4) { // 60% chance to remove if events exist
+            // Random number of events to remove (1-2, but not more than available)
+            const numToRemove = Math.min(
+              Math.floor(Math.random() * 2) + 1,
+              prev.length
+            );
+            
+            // Randomly select events to remove
+            const indicesToRemove = new Set<number>();
+            while (indicesToRemove.size < numToRemove && indicesToRemove.size < prev.length) {
+              indicesToRemove.add(Math.floor(Math.random() * prev.length));
+            }
+            
+            const newEvents = prev.filter((_, index) => !indicesToRemove.has(index));
+            scheduleRemoveEvent(); // Schedule next removal
+            return newEvents;
+          }
+          scheduleRemoveEvent(); // Schedule next removal attempt even if we didn't remove
+          return prev;
+        });
+      }, delay);
+    };
+
+    // Start the scheduling
+    scheduleAddEvent();
+    scheduleRemoveEvent();
+
+    return () => {
+      clearTimeout(addTimeoutId);
+      clearTimeout(removeTimeoutId);
+    };
+  }, [loading]);
+
+  const allDots = dynamicEvents;
 
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col bg-black">
         {/* Compact Header */}
         <div className="px-6 py-4 border-b border-neutral-800 bg-black">
-          <h1 className="text-xl font-semibold text-white mb-4">Dashboard</h1>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-            <StatsCard icon={Ghost} label="Ghost User" value={ghostUserCount} color="text-neutral-400" />
-            <StatsCard icon={Users} label="Teams" value={teamsCount} color="text-blue-400" />
-            <StatsCard icon={Zap} label="Sprints" value={sprints.length} color="text-yellow-400" />
-            <StatsCard icon={Activity} label="Queue Depth" value={queueDepth} color="text-red-400" />
-            <StatsCard icon={BarChart} label="Repo Analysis %" value={`${repoAnalysisPercent}%`} color="text-green-400" />
-            <StatsCard icon={GitBranch} label="Commit Analysis" value={`${commitAnalysisRate}%`} color="text-purple-400" />
-            <StatsCard icon={Gauge} label="API Limit" value={`${rateLimit.remaining}`} subValue={`/${rateLimit.limit}`} color="text-orange-400" />
-          </div>
+          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
         </div>
 
         <div className="flex-1 overflow-hidden bg-black relative">
@@ -153,19 +241,3 @@ export function DashboardPage() {
   );
 }
 
-function StatsCard({ icon: Icon, label, value, subValue, color }: { icon: any, label: string, value: string | number, subValue?: string, color: string }) {
-  return (
-    <Card className="bg-neutral-900 border-neutral-800 p-0 overflow-hidden relative">
-      <CardContent className="p-4 flex flex-col justify-between h-full">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-neutral-500 text-[10px] font-medium uppercase tracking-wider truncate">{label}</span>
-          <Icon className={`w-4 h-4 ${color}`} />
-        </div>
-        <div className="flex items-baseline">
-          <div className="text-2xl font-bold text-white">{value}</div>
-          {subValue && <div className="text-xs text-neutral-500 ml-1">{subValue}</div>}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

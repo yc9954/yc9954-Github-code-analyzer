@@ -40,6 +40,8 @@ export default function RotatingEarth({
   const containerDimensionsRef = useRef<{ width: number; height: number; radius: number } | null>(null);
   const renderCallbackRef = useRef<(() => void) | null>(null);
   const selectedDotRef = useRef<CustomDot | null>(null);
+  const customDotsRef = useRef<CustomDot[]>([]);
+  const dotOpacitiesRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -216,8 +218,13 @@ export default function RotatingEarth({
         });
       }
 
-      // Draw custom dots for issues/sprints
-      customDots.forEach((dot) => {
+      // Draw custom dots for issues/sprints with opacity
+      customDotsRef.current.forEach((dot) => {
+        const dotId = dot.id || `${dot.lat}-${dot.lng}`;
+        const opacity = dotOpacitiesRef.current.get(dotId) ?? 1;
+        
+        if (opacity <= 0) return; // Skip fully transparent dots
+        
         const projected = projection([dot.lng, dot.lat] as [number, number]);
         if (
           projected &&
@@ -229,14 +236,18 @@ export default function RotatingEarth({
           const dotSize = (dot.size || 6) * scaleFactor;
           const dotColor = dot.color || "#7aa2f7";
 
+          // Apply opacity
+          context.globalAlpha = opacity;
+          
           // Glow effect
-          context.shadowBlur = 15 * scaleFactor;
+          context.shadowBlur = 15 * scaleFactor * opacity;
           context.shadowColor = dotColor;
           context.fillStyle = dotColor;
           context.beginPath();
           context.arc(projected[0], projected[1], dotSize, 0, 2 * Math.PI);
           context.fill();
           context.shadowBlur = 0;
+          context.globalAlpha = 1;
         }
       });
 
@@ -377,7 +388,11 @@ export default function RotatingEarth({
       let minDistance = Infinity;
       const clickThreshold = 30; // pixels
 
-      customDots.forEach((dot) => {
+      customDotsRef.current.forEach((dot) => {
+        const dotId = dot.id || `${dot.lat}-${dot.lng}`;
+        const opacity = dotOpacitiesRef.current.get(dotId) ?? 1;
+        if (opacity <= 0) return; // Skip invisible dots
+        
         const projected = projectionRef.current!([dot.lng, dot.lat] as [number, number]);
         if (projected) {
           const distance = Math.sqrt(
@@ -419,7 +434,91 @@ export default function RotatingEarth({
       canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("click", handleClick);
     };
-  }, [width, height, customDots]);
+  }, [width, height]); // Removed customDots from dependencies to prevent re-rendering
+
+  // Update dots and animate opacity changes
+  useEffect(() => {
+    const currentDots = customDots || [];
+    const currentDotIds = new Set(currentDots.map(d => d.id || `${d.lat}-${d.lng}`));
+    const previousDotIds = new Set(customDotsRef.current.map(d => d.id || `${d.lat}-${d.lng}`));
+    
+    // Fade in new dots
+    currentDots.forEach(dot => {
+      const dotId = dot.id || `${dot.lat}-${dot.lng}`;
+      if (!previousDotIds.has(dotId)) {
+        // New dot - start from 0 and fade in
+        dotOpacitiesRef.current.set(dotId, 0);
+      }
+    });
+    
+    // Keep fading out dots in the ref until they're fully transparent
+    // Merge current dots with fading out dots
+    const allDotsMap = new Map<string, CustomDot>();
+    
+    // Add current dots
+    currentDots.forEach(dot => {
+      const dotId = dot.id || `${dot.lat}-${dot.lng}`;
+      allDotsMap.set(dotId, dot);
+    });
+    
+    // Keep fading out dots that are being removed
+    customDotsRef.current.forEach(dot => {
+      const dotId = dot.id || `${dot.lat}-${dot.lng}`;
+      if (!currentDotIds.has(dotId)) {
+        // Dot being removed - keep it for fade out
+        const opacity = dotOpacitiesRef.current.get(dotId) ?? 1;
+        if (opacity > 0) {
+          allDotsMap.set(dotId, dot);
+        }
+      }
+    });
+    
+    // Update dots reference with merged list
+    customDotsRef.current = Array.from(allDotsMap.values());
+    
+    // Animate opacity changes
+    const animate = () => {
+      let hasChanges = false;
+      const dotsToRemove: string[] = [];
+      
+      customDotsRef.current.forEach(dot => {
+        const dotId = dot.id || `${dot.lat}-${dot.lng}`;
+        const currentOpacity = dotOpacitiesRef.current.get(dotId) ?? (currentDotIds.has(dotId) ? 0 : 1);
+        const targetOpacity = currentDotIds.has(dotId) ? 1 : 0;
+        
+        if (Math.abs(currentOpacity - targetOpacity) > 0.01) {
+          const newOpacity = currentOpacity + (targetOpacity - currentOpacity) * 0.15;
+          dotOpacitiesRef.current.set(dotId, newOpacity);
+          hasChanges = true;
+        } else if (targetOpacity === 0 && currentOpacity <= 0.01) {
+          // Fully faded out, mark for removal
+          dotsToRemove.push(dotId);
+          dotOpacitiesRef.current.delete(dotId);
+          hasChanges = true;
+        } else if (targetOpacity === 1 && currentOpacity < 1) {
+          dotOpacitiesRef.current.set(dotId, 1);
+          hasChanges = true;
+        }
+      });
+      
+      // Remove fully faded out dots
+      if (dotsToRemove.length > 0) {
+        customDotsRef.current = customDotsRef.current.filter(
+          dot => !dotsToRemove.includes(dot.id || `${dot.lat}-${dot.lng}`)
+        );
+      }
+      
+      if (hasChanges && renderCallbackRef.current) {
+        renderCallbackRef.current();
+      }
+      
+      if (hasChanges) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, [customDots]);
 
   // Update popup position when selectedDot changes or on render
   useEffect(() => {
