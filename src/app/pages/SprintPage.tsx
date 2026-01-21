@@ -36,7 +36,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/app/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { GitBranch, Search, Filter, Calendar as CalendarIcon, User, Users, Trophy, ChevronRight, Clock, Plus, LayoutGrid, List, MoreHorizontal, CheckCircle2, XCircle, AlertCircle, Sparkles, Clipboard, MessageSquare, TrendingUp, TrendingDown, ChevronDown, X, ExternalLink } from "lucide-react";
+import { GitBranch, Search, Filter, Calendar as CalendarIcon, User, Users, Trophy, ChevronRight, Clock, Plus, LayoutGrid, List, MoreHorizontal, CheckCircle2, XCircle, AlertCircle, Sparkles, Clipboard, MessageSquare, TrendingUp, TrendingDown, ChevronDown, X, ExternalLink, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { FaGithub, FaTrophy, FaMedal, FaRegCopy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Progress } from "@/app/components/ui/progress";
@@ -316,6 +316,16 @@ export function SprintPage() {
   // State for Join Private Sprint
   const [isJoinPrivateOpen, setIsJoinPrivateOpen] = useState(false);
   const [joinSprintId, setJoinSprintId] = useState("");
+
+  // UI State for Sprint ID
+  const [isIdVisible, setIsIdVisible] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   const handleJoinPrivateSprint = async () => {
     if (!joinSprintId) {
@@ -1060,21 +1070,28 @@ export function SprintPage() {
                     <div className="flex flex-col md:flex-row gap-6 justify-between items-start">
                       <div className="space-y-3 flex-1">
                         <div>
-                          <h1 className="text-2xl font-bold text-white mb-2">{selectedSprintData.name}</h1>
-                          <div className="flex items-center gap-2 mb-2">
-                            <code className="bg-black/50 border border-neutral-800 px-2 py-0.5 rounded text-[10px] text-neutral-400 font-mono">
-                              ID: {selectedSprintData.id}
-                            </code>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 w-5 p-0 text-neutral-500 hover:text-white"
-                              onClick={() => {
-                                navigator.clipboard.writeText(selectedSprintData.id);
-                              }}
-                            >
-                              <FaRegCopy className="w-3 h-3" />
-                            </Button>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h1 className="text-2xl font-bold text-white mb-0">{selectedSprintData.name}</h1>
+                            {/* Sprint ID Display */}
+                            <div className="flex items-center gap-2 bg-neutral-900/80 rounded-lg px-2 py-1 border border-neutral-800">
+                              <div className="text-xs text-neutral-400 font-mono">
+                                {isIdVisible ? selectedSprintData.id : "••••••••-••••-••••"}
+                              </div>
+                              <div className="flex items-center border-l border-neutral-800 pl-1 ml-1 gap-1">
+                                <button
+                                  onClick={() => setIsIdVisible(!isIdVisible)}
+                                  className="text-neutral-500 hover:text-white transition-colors p-0.5"
+                                >
+                                  {isIdVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                </button>
+                                <button
+                                  onClick={() => copyToClipboard(selectedSprintData.id.toString())}
+                                  className="text-neutral-500 hover:text-white transition-colors p-0.5"
+                                >
+                                  {isCopied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                </button>
+                              </div>
+                            </div>
                           </div>
                           <p className="text-neutral-400 text-sm leading-relaxed">
                             {selectedSprintData.description || "No description provided for this sprint."}
@@ -1546,7 +1563,18 @@ export function SprintPage() {
                             </TableRow>
                           ) : (
                             sprintRankings.map((item) => (
-                              <TableRow key={item.rank} className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8">
+                              <TableRow
+                                key={item.rank}
+                                className="border-neutral-800 bg-black hover:bg-neutral-900 cursor-pointer h-8 group transition-colors"
+                                onClick={() => {
+                                  if (item.team?.isPublic) {
+                                    // Use navigate for internal routing without reload
+                                    navigate(`/teams/${item.team.teamId}`);
+                                  } else if (item.team?.repoUrl) {
+                                    window.open(item.team.repoUrl, '_blank');
+                                  }
+                                }}
+                              >
                                 <TableCell className="font-medium text-white text-sm py-1">
                                   <div className="flex items-center gap-1">
                                     {item.rank <= 3 && (
@@ -1578,15 +1606,7 @@ export function SprintPage() {
                                 <TableCell className="text-sm py-1">
                                   <div className="flex items-center gap-2">
                                     <div
-                                      className="text-sm font-medium text-white hover:text-blue-400 transition-colors"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (item.team?.isPublic) {
-                                          window.location.href = `/teams/${item.team.teamId}`;
-                                        } else if (item.team?.repoUrl) {
-                                          window.open(item.team.repoUrl, '_blank');
-                                        }
-                                      }}
+                                      className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors"
                                     >
                                       {item.team?.name || 'Unknown Team'}
                                     </div>
@@ -2073,7 +2093,7 @@ export function SprintPage() {
             )}
           </div>
         </div>
-      </div>
+      </div >
 
     </DashboardLayout >
   );
