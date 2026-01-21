@@ -4,8 +4,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ owner: string; repo: string }> }
 ) {
+  const { owner, repo } = await params;
   try {
-    const { owner, repo } = await params;
     const searchParams = request.nextUrl.searchParams;
     const branch = searchParams.get('branch') || 'main';
     const perPage = Math.min(parseInt(searchParams.get('per_page') || '20'), 20); // 최대 20개로 제한
@@ -38,7 +38,7 @@ export async function GET(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`GitHub API error (${response.status}):`, errorText);
-      
+
       if (response.status === 404 || response.status === 403) {
         console.warn(`Repository or branch not found: ${owner}/${repo} branch: ${branch}`);
         return NextResponse.json({
@@ -49,7 +49,7 @@ export async function GET(
     }
 
     const commits = await response.json();
-    
+
     // GitHub API는 배열을 직접 반환
     if (!Array.isArray(commits)) {
       console.error('GitHub API returned non-array:', commits);

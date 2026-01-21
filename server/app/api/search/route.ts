@@ -25,10 +25,40 @@ export async function GET(request: NextRequest) {
       headers['Authorization'] = `token ${githubToken}`;
     }
 
-    // GitHub API 호출
+    const startTime = Date.now();
+    // GitHub API 호출 또는 SprintGit API 호출
     let githubUrl: URL;
     let githubQuery = query;
-    
+
+    if (type === 'TEAM' || type === 'SPRINT') {
+      const sprintGitUrl = new URL(`https://api.sprintgit.com/api/search`);
+      sprintGitUrl.searchParams.set('q', query);
+      sprintGitUrl.searchParams.set('type', type);
+
+      const response = await fetch(sprintGitUrl.toString(), {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': request.headers.get('Authorization') || '',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`SprintGit API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const queryTime = Date.now() - startTime;
+
+      return NextResponse.json({
+        ...result.data,
+        total: result.data.teams?.length || result.data.sprints?.length || 0,
+        queryTime,
+        page,
+        perPage,
+        totalPages: 1, // SprintGit search might not support pagination yet
+      });
+    }
+
     if (type === 'users') {
       // 유저 검색
       githubUrl = new URL('https://api.github.com/search/users');
@@ -48,7 +78,6 @@ export async function GET(request: NextRequest) {
       githubUrl.searchParams.set('page', page.toString());
     }
 
-    const startTime = Date.now();
     const response = await fetch(githubUrl.toString(), { headers });
 
     if (!response.ok) {
