@@ -850,30 +850,31 @@ export async function getSprintRankings(
       }));
     } else {
       // Updated TEAM ranking logic based on user provided curl/response
-      const response = await apiCall<{
-        status: string;
-        message: string;
-        data: Array<{
-          rank: number;
-          teamName: string;
-          score: number;
-          commits: number;
-          memberCount: number;
-        }>;
-      }>(`/api/sprints/${sprintId}/ranking?type=TEAM`);
+      // API call returns the unwrapped array (data.data) because of the wrapper logic in apiCall
+      const response = await apiCall<Array<{
+        rank: number;
+        teamName: string;
+        name?: string; // Some apis might return name
+        teamId?: string;
+        score: number;
+        commits: number;
+        memberCount: number;
+        members?: number;
+      }>>(`/api/sprints/${sprintId}/ranking?type=TEAM`);
 
-      if (!response.data || !Array.isArray(response.data)) {
+      if (!response || !Array.isArray(response)) {
+        console.warn('Sprint metrics response is not an array:', response);
         return [];
       }
 
-      return response.data.map((item) => ({
+      return response.map((item) => ({
         rank: item.rank,
         team: {
-          teamId: "unknown",
-          name: item.teamName,
+          teamId: item.teamId || "unknown",
+          name: item.teamName || item.name || "Unknown Team",
           score: item.score || 0,
           commits: item.commits || 0,
-          members: item.memberCount || 0
+          members: item.memberCount || item.members || 0
         },
       }));
     }
@@ -915,8 +916,9 @@ export async function updateSprint(
  */
 export async function banTeam(sprintId: string, teamId: string): Promise<void> {
   try {
-    await apiCall(`/api/sprints/${sprintId}/registrations/${teamId}/ban`, {
+    await apiCall(`/api/sprints/${sprintId}/ban`, {
       method: 'POST',
+      body: JSON.stringify({ teamId }),
     });
   } catch (error) {
     console.error('Error banning team:', error);
@@ -933,11 +935,59 @@ export async function approveTeam(
   approve: boolean
 ): Promise<void> {
   try {
-    await apiCall(`/api/sprints/${sprintId}/registrations/${teamId}/approve?approve=${approve}`, {
+    await apiCall(`/api/sprints/${sprintId}/approve`, {
       method: 'POST',
+      body: JSON.stringify({ teamId, approve }),
     });
   } catch (error) {
     console.error('Error approving/rejecting team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get sprint basic info
+ */
+export async function getSprintInfo(sprintId: string): Promise<{
+  sprintId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  open: boolean;
+  private: boolean;
+}> {
+  try {
+    return await apiCall(`/api/sprints/${encodeURIComponent(sprintId)}/info`);
+  } catch (error) {
+    console.error('Error fetching sprint info:', error);
+    throw error;
+  }
+}
+
+/**
+ * Register team for sprint
+ */
+export async function registerTeamForSprint(
+  sprintId: string,
+  teamId: string,
+  repoId: string
+): Promise<{
+  sprintId: string;
+  teamId: string;
+  repoId: string;
+  status: string;
+  webhookUrl?: string;
+  webhookSent?: boolean;
+  webhookError?: string;
+}> {
+  try {
+    return await apiCall(`/api/sprints/${encodeURIComponent(sprintId)}/registration`, {
+      method: 'POST',
+      body: JSON.stringify({ teamId, repoId }),
+    });
+  } catch (error) {
+    console.error('Error registering team for sprint:', error);
     throw error;
   }
 }

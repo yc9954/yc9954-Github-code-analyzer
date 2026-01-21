@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
         });
 
         const data = await response.json();
+        console.log('[API/teams/leader] Response:', data);
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         console.error('Error proxying GET /api/teams/leader:', error);

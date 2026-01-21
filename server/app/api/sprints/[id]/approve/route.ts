@@ -7,8 +7,9 @@ export async function POST(
     const { id } = await params;
     try {
         const authHeader = request.headers.get('Authorization');
-        const { teamId } = await request.json();
-        const url = `https://api.sprintgit.com/api/sprints/${id}/approve?teamId=${teamId}`;
+        const { teamId, approve } = await request.json();
+        // Upstream URL: /api/sprints/{sprintId}/registrations/{teamId}/approve?approve={approve}
+        const url = `https://api.sprintgit.com/api/sprints/${id}/registrations/${teamId}/approve?approve=${approve}`;
 
         const response = await fetch(url, {
             method: 'POST',

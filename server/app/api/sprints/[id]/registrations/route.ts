@@ -9,6 +9,7 @@ export async function GET(
     const token = request.headers.get('Authorization');
 
     try {
+        console.log(`[API/sprints/${id}/registrations] Proxying to: ${url}`);
         const response = await fetch(url, {
             headers: {
                 'Accept': '*/*',
@@ -17,8 +18,10 @@ export async function GET(
         });
 
         const data = await response.json();
+        console.log(`[API/sprints/${id}/registrations] Backend response:`, response.status, data);
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
+        console.error(`[API/sprints/${id}/registrations] Proxy error:`, error);
         return NextResponse.json(
             { message: 'Internal Server Error', error: String(error) },
             { status: 500 }

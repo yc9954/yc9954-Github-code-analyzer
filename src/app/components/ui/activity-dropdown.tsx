@@ -23,7 +23,7 @@ export function ActivityDropdown() {
     // Poll every 60 seconds
     const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Remove activities from dependency to prevent infinite loop
 
   const loadNotifications = async () => {
     try {

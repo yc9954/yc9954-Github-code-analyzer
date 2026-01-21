@@ -12,20 +12,30 @@ import {
   banTeam,
   approveTeam,
   getSprintRegistrations,
+  getSprintInfo,
+  registerTeamForSprint,
+  getLeaderTeams,
+  getTeamRepos,
+  getTeamMembers,
   type Sprint,
   type SprintRanking,
   type UserResponse,
-  type SprintRegistration
+  type SprintRegistration,
+  type TeamDetailResponse,
+  type TeamMemberResponse,
+  type TeamRepo,
+  searchRepositories
 } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
 import { Badge } from "@/app/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { TrendingUp, TrendingDown, Search, Plus, GitBranch, ChevronDown, ChevronRight, Sparkles, MessageSquare, X, User, Calendar as CalendarIcon } from "lucide-react";
-import { FaTrophy } from "react-icons/fa";
+import { GitBranch, Search, Filter, Calendar as CalendarIcon, User, Users, Trophy, ChevronRight, Clock, Plus, LayoutGrid, List, MoreHorizontal, CheckCircle2, XCircle, AlertCircle, Sparkles, Clipboard, MessageSquare, TrendingUp, TrendingDown, ChevronDown, X } from "lucide-react";
+import { FaGithub, FaTrophy, FaMedal, FaRegCopy } from "react-icons/fa";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 import { Progress } from "@/app/components/ui/progress";
 import { Switch } from "@/app/components/ui/switch";
@@ -240,9 +250,22 @@ const CalendarWithRangePresets = ({
 };
 
 export function SprintPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSprint, setSelectedSprint] = useState<string | null>(null);
+  const selectedSprint = searchParams.get("sprintId");
+  const viewMode = (searchParams.get("mode") as "list" | "participate" | "ranking" | "create" | "manage") || "list";
+
+  const navigateSprint = (mode: string, sprintId?: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("mode", mode);
+    if (sprintId) {
+      params.set("sprintId", sprintId);
+    } else {
+      params.delete("sprintId");
+    }
+    setSearchParams(params);
+  };
+
   const [selectedRepos, setSelectedRepos] = useState<number[]>([]);
   const [expandedCommits, setExpandedCommits] = useState<string[]>([]);
   const [aiOpen, setAiOpen] = useState(false);
@@ -253,6 +276,20 @@ export function SprintPage() {
   const [userId, setUserId] = useState<number | null>(null);
   const [teamIdInput, setTeamIdInput] = useState("");
   const [registrations, setRegistrations] = useState<SprintRegistration[]>([]);
+  const [activeTab, setActiveTab] = useState("browse");
+  const [mySprints, setMySprints] = useState<Sprint[]>([]);
+  const [allPendingRegistrations, setAllPendingRegistrations] = useState<(SprintRegistration & { sprintId: string })[]>([]);
+  const [loadingMySprints, setLoadingMySprints] = useState(false);
+
+  // Team-based registration state
+  const [leaderTeams, setLeaderTeams] = useState<(TeamDetailResponse & { repoCount?: number })[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [teamRepos, setTeamRepos] = useState<TeamRepo[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<TeamMemberResponse[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
 
   // Load user profile to get ID
@@ -289,7 +326,7 @@ export function SprintPage() {
         managerId: currentUser.id,
       });
       alert("Sprint created successfully!");
-      setViewMode("list");
+      navigateSprint("list", null);
       setCreateForm({ name: "", description: "", isPublic: true });
       // Reload sprints
       loadSprints();
@@ -308,8 +345,8 @@ export function SprintPage() {
         description: createForm.description,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
-        isPrivate: false, // Default or toggle
-        isOpen: true,    // Default or toggle
+        isPrivate: !createForm.isPublic,
+        isOpen: true, // Assuming it's open if being updated, or we could add a toggle
         managerId: currentUser.id,
       });
       alert("Sprint updated successfully!");
@@ -351,25 +388,21 @@ export function SprintPage() {
     }
   };
   const onRegisterSprint = async () => {
-    if (!selectedSprint || selectedRepos.length === 0 || !teamIdInput) {
-      alert("Please select a sprint, a repository, and enter a Team ID.");
+    if (!selectedSprint || !selectedTeam || !selectedRepo) {
+      alert("Please select a team and a repository.");
       return;
     }
 
     try {
-      // Assuming single repo registration for now based on API structure (repoId string)
-      // If API accepted array, we'd loop.
-      // API: repoId: string.
-      // So we register the first selected repo.
-      await registerSprint(selectedSprint.toString(), {
-        teamId: teamIdInput,
-        repoId: selectedRepos[0].toString()
-      });
+      await registerTeamForSprint(selectedSprint.toString(), selectedTeam, selectedRepo);
       alert("Registration successful!");
-      setViewMode("list");
-    } catch (e) {
+      // Reset and go back to list
+      setSelectedTeam(null);
+      setSelectedRepo(null);
+      navigateSprint("list", null);
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to register.");
+      alert(`Failed to register: ${e.message || 'Unknown error'}`);
     }
   };
 
@@ -385,10 +418,87 @@ export function SprintPage() {
     );
   };
 
-  const [viewMode, setViewMode] = useState<"list" | "participate" | "ranking" | "create" | "manage">("list");
   const [rankingViewType, setRankingViewType] = useState<"individual" | "team">("team");
   const [currentUser, setCurrentUser] = useState<UserResponse | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Load leader teams when entering participate mode
+  useEffect(() => {
+    if (viewMode === 'participate') {
+      setLoadingTeams(true);
+      getLeaderTeams()
+        .then(async (teams) => {
+          // For each team, fetch members and repos to get accurate info
+          const enrichedTeams = await Promise.all(
+            teams.map(async (team) => {
+              try {
+                const [members, repos] = await Promise.all([
+                  getTeamMembers(team.teamId),
+                  getTeamRepos(team.teamId)
+                ]);
+                const activeCount = members.filter(m => m.status !== 'PENDING').length;
+                return {
+                  ...team,
+                  memberCount: activeCount,
+                  repoCount: repos.length
+                };
+              } catch (err) {
+                console.error(`Failed to fetch details for team ${team.teamId}`, err);
+                return { ...team, repoCount: 0 };
+              }
+            })
+          );
+
+          // Sort: Teams with repos first, then alphabetically
+          const sortedTeams = enrichedTeams.sort((a, b) => {
+            const aHasRepos = (a.repoCount || 0) > 0;
+            const bHasRepos = (b.repoCount || 0) > 0;
+            if (aHasRepos && !bHasRepos) return -1;
+            if (!aHasRepos && bHasRepos) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          setLeaderTeams(sortedTeams);
+          // Reset selections
+          setSelectedTeam(null);
+          setTeamRepos([]);
+          setSelectedRepo(null);
+        })
+        .catch(err => console.error("Failed to load leader teams", err))
+        .finally(() => setLoadingTeams(false));
+    }
+  }, [viewMode]);
+
+  // Load team repos and members when a team is selected
+  useEffect(() => {
+    if (selectedTeam) {
+      setLoadingRepos(true);
+      setLoadingMembers(true);
+
+      // Fetch repos
+      getTeamRepos(selectedTeam)
+        .then(repos => {
+          setTeamRepos(repos);
+          setSelectedRepo(null); // Reset repo selection
+        })
+        .catch(err => console.error("Failed to load team repos", err))
+        .finally(() => setLoadingRepos(false));
+
+      // Fetch members
+      import("@/lib/api").then(({ getTeamMembers }) => {
+        getTeamMembers(selectedTeam)
+          .then(members => {
+            setSelectedTeamMembers(members);
+          })
+          .catch(err => console.error("Failed to load team members", err))
+          .finally(() => setLoadingMembers(false));
+      });
+    } else {
+      setTeamRepos([]);
+      setSelectedRepo(null);
+      setSelectedTeamMembers([]);
+    }
+  }, [selectedTeam]);
 
   // Date range state for calendar
   const today = new Date();
@@ -401,39 +511,104 @@ export function SprintPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const loadAllPendingRegistrations = async (managedSprints: Sprint[], mySprints: Sprint[]) => {
+    try {
+      const allRegs = await Promise.all(
+        managedSprints.map(async s => {
+          const regs = await getSprintRegistrations(s.id);
+          return regs.map(r => ({ ...r, sprintId: s.id }));
+        })
+      );
+
+      let flattened = allRegs.flat().filter(r => r.status === 'PENDING');
+
+      // Also add my own pending sprints if any
+      const myPending = mySprints.filter(s => s.status === 'PENDING').map(s => ({
+        teamId: "My Team", // We don't have the team ID easily but we can label it
+        teamName: "Your Team",
+        repoId: "Pending",
+        status: 'PENDING' as const,
+        registeredAt: new Date().toISOString(),
+        sprintId: s.id
+      }));
+
+      setAllPendingRegistrations([...flattened, ...myPending]);
+    } catch (error) {
+      console.error("Failed to load all pending registrations", error);
+    }
+  };
+
   const loadSprints = async () => {
     setLoadingSprints(true);
+    setLoadingMySprints(true);
     try {
-      const data = await getSprints();
-      // The API returns a list. If it's successful, use it.
-      setSprints(data || []);
+      const [all, mine] = await Promise.all([
+        getSprints(),
+        getMySprints()
+      ]);
+      setSprints(all || []);
+      setMySprints(mine || []);
+
+      const managed = mine.filter(s => s.managerName === currentUser?.username);
+      loadAllPendingRegistrations(managed, mine || []);
     } catch (error) {
       console.error('Error loading sprints:', error);
-      // Fallback to mock data ONLY on error, or maybe show error state?
-      // Since user said "Sprint list bad", let's try to not mask the error with mocks if possible,
-      // but if the user wants functionality, maybe mocks are distracting.
-      // However, the original code had mocks. I'll keep mocks for error cases but logging is important.
-      setSprints(allSprints.map((s) => ({
-        id: s.id.toString(),
-        name: s.name,
-        startDate: new Date().toISOString(),
-        endDate: new Date().toISOString(),
-        isPrivate: false,
-        isOpen: s.status === 'active',
-        teamsCount: s.teams,
-        participantsCount: s.participants,
-        status: s.status,
-        managerName: "admin"
-      })));
+      setSprints([]);
+      setMySprints([]);
     } finally {
       setLoadingSprints(false);
+      setLoadingMySprints(false);
     }
   };
 
   // Load sprints from API
   useEffect(() => {
-    loadSprints();
-  }, []);
+    if (currentUser) {
+      loadSprints();
+    }
+  }, [currentUser]);
+
+  const handleSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      loadSprints();
+      return;
+    }
+
+    setLoadingSprints(true);
+    try {
+      // Use the integrated search API
+      const response = await searchRepositories(searchQuery, undefined, 'best-match', 'sprints');
+
+      // Map current sprints to preserve full data if they exist in search results
+      // or fetch missing data for new sprints found in search
+      const searchResults = response.sprints || [];
+
+      // Filter existing sprints or create partial ones
+      const mappedResults: Sprint[] = searchResults.map(sr => {
+        const existing = sprints.find(s => s.id === sr.id);
+        if (existing) return existing;
+
+        return {
+          id: sr.id,
+          name: sr.name,
+          description: sr.description,
+          startDate: new Date().toISOString(), // Fallback
+          endDate: new Date().toISOString(),   // Fallback
+          isPrivate: false,
+          isOpen: true,
+          status: 'Active'
+        } as Sprint;
+      });
+
+      setSprints(mappedResults);
+      setActiveTab("browse"); // Switch to browse to see search results
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setLoadingSprints(false);
+    }
+  };
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -441,17 +616,25 @@ export function SprintPage() {
 
   // Filter, Sort, and Paginate
   const filteredSprints = useMemo(() => {
-    let result = [...sprints];
+    let source = sprints;
+    if (activeTab === "joined") {
+      source = mySprints;
+    } else if (activeTab === "managed") {
+      source = mySprints.filter(s => s.managerName === currentUser?.username);
+    }
 
-    // 1. Search Filter
-    if (searchQuery) {
+    let result = [...source];
+
+    // 1. Search Filter - Only filter client-side if we are NOT using the server-side search
+    // Since we now have handleSearch for Browse tab, we only filter Joined/Managed here
+    if (searchQuery && (activeTab === "joined" || activeTab === "managed")) {
       result = result.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // 2. Status Filter
-    if (statusFilter !== "all") {
+    if (statusFilter !== "all" && activeTab !== "pending") {
       result = result.filter(s => {
         const isActive = s.status === 'active' || s.isOpen;
         return statusFilter === 'active' ? isActive : !isActive;
@@ -472,7 +655,7 @@ export function SprintPage() {
     });
 
     return result;
-  }, [sprints, searchQuery, statusFilter]);
+  }, [sprints, mySprints, activeTab, searchQuery, statusFilter, currentUser]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredSprints.length / ITEMS_PER_PAGE);
@@ -491,16 +674,20 @@ export function SprintPage() {
 
   // Load sprint rankings and registrations when a sprint is selected
   useEffect(() => {
-    // Load rankings if in 'ranking' mode OR 'participate' (detail) mode
+    // Load rankings if in 'ranking' mode OR 'participate' (detail) mode OR 'manage' mode
     if (selectedSprint && (viewMode === 'ranking' || viewMode === 'manage' || viewMode === 'participate')) {
       const loadRankings = async () => {
         setLoadingRankings(true);
+        setSprintRankings([]); // Clear stale rankings
         try {
           const sprintId = sprints.find(s => s.id === selectedSprint.toString())?.id || selectedSprint.toString();
-          // Use INDIVIDUAL for detail view by default, or the selected rankingViewType
-          const type = viewMode === 'participate' ? 'INDIVIDUAL' : (rankingViewType === 'team' ? 'TEAM' : 'INDIVIDUAL');
+          console.log(`[SprintPage] Loading rankings for sprint ${sprintId}`);
+
+          // Use the selected rankingViewType, default to 'team' for detail view if not set
+          const type = rankingViewType === 'individual' ? 'INDIVIDUAL' : 'TEAM';
 
           const data = await getSprintRankings(sprintId, type);
+          console.log(`[SprintPage] Rankings loaded:`, data);
           setSprintRankings(data);
         } catch (error) {
           console.error('Error loading sprint rankings:', error);
@@ -510,7 +697,6 @@ export function SprintPage() {
       };
 
       const loadRegistrations = async () => {
-        if (!isManager) return;
         setLoadingRegistrations(true);
         try {
           const data = await getSprintRegistrations(selectedSprint);
@@ -523,17 +709,11 @@ export function SprintPage() {
       };
 
       loadRankings();
-      if (isManager) loadRegistrations();
+      loadRegistrations(); // Fetch for both managers and participants to check already-registered status
     }
-  }, [selectedSprint, viewMode, rankingViewType, sprints, isManager]);
+  }, [selectedSprint, viewMode, rankingViewType, sprints]);
 
-  // Check URL query parameter for ranking view
-  useEffect(() => {
-    const view = searchParams.get("view");
-    if (view === "ranking") {
-      setViewMode("ranking");
-    }
-  }, [searchParams]);
+  // Synchronize state with URL is now handled by derivations above
 
   // Update date inputs when date range changes
   useEffect(() => {
@@ -554,7 +734,7 @@ export function SprintPage() {
             <h1 className="text-base font-semibold text-white">Sprints</h1>
             <div className="flex items-center gap-2">
               <Button
-                onClick={() => setViewMode("ranking")}
+                onClick={() => navigateSprint("ranking", selectedSprint)}
                 variant="outline"
                 className="border-neutral-800 bg-neutral-900 text-white hover:bg-neutral-800 h-8 text-xs px-3"
               >
@@ -564,7 +744,7 @@ export function SprintPage() {
               {isManager && (
                 <Button
                   onClick={() => {
-                    setViewMode("manage");
+                    navigateSprint("manage", selectedSprint);
                     if (selectedSprintData) {
                       setCreateForm({
                         name: selectedSprintData.name,
@@ -581,7 +761,7 @@ export function SprintPage() {
                 </Button>
               )}
               <Button
-                onClick={() => setViewMode("create")}
+                onClick={() => navigateSprint("create", null)}
                 className="bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-xs px-3"
               >
                 <Plus className="w-4 h-4 mr-1" />
@@ -595,97 +775,161 @@ export function SprintPage() {
           <div className="max-w-6xl mx-auto space-y-2">
             {/* Main Content */}
             {viewMode === "list" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-                    <Input
-                      placeholder="Search sprints..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8 bg-neutral-900 border-neutral-800 text-white h-8 text-sm"
-                    />
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-28 bg-neutral-900 border-neutral-800 text-white h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-neutral-900 border-neutral-800">
-                      <SelectItem value="all" className="text-white text-sm">All</SelectItem>
-                      <SelectItem value="active" className="text-white text-sm">Active</SelectItem>
-                      <SelectItem value="completed" className="text-white text-sm">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                  <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full md:max-w-xl">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                      <Input
+                        className="pl-9 bg-neutral-900 border-neutral-800 text-white h-10"
+                        placeholder="Search sprints..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-40 bg-neutral-900 border-neutral-800 text-white h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-neutral-900 border-neutral-800">
+                        <SelectItem value="all" className="text-white">All Sprints</SelectItem>
+                        <SelectItem value="active" className="text-white">Active Only</SelectItem>
+                        <SelectItem value="completed" className="text-white">Completed Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button type="submit" variant="secondary" className="bg-neutral-900 text-white border border-neutral-800 hover:bg-neutral-800 h-10 px-4">
+                      Search
+                    </Button>
+                  </form>
                 </div>
 
-                <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Sprint Name</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Period</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Teams</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Participants</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Status</TableHead>
-                        <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedSprints.map((sprint) => (
-                        <TableRow
-                          key={sprint.id}
-                          className="border-neutral-800 bg-black hover:bg-neutral-900 h-8 cursor-pointer transition-colors"
-                          onClick={() => {
-                            setSelectedSprint(sprint.id);
-                            setViewMode("participate");
-                          }}
-                        >
-                          <TableCell className="font-medium text-white text-sm py-1">{sprint.name}</TableCell>
-                          <TableCell className="text-white/60 text-sm py-1">
-                            {format(new Date(sprint.startDate), 'MMM dd')} - {format(new Date(sprint.endDate), 'MMM dd')}
-                          </TableCell>
-                          <TableCell className="text-white text-right text-sm py-1">{sprint.teamsCount || 0}</TableCell>
-                          <TableCell className="text-neutral-400 text-right text-sm py-1">{sprint.participantsCount || 0}</TableCell>
-                          <TableCell className="py-1">
-                            <Badge className={sprint.status === 'active' || sprint.isOpen ? 'bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-1.5' : 'bg-neutral-900 text-neutral-400 border-neutral-800 text-xs h-4 px-1.5'}>
-                              {sprint.status || (sprint.isOpen ? 'active' : 'closed')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
-                            {currentUser && sprint.managerName === currentUser.username && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs px-2 text-red-400 hover:text-red-300"
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="bg-neutral-900 border border-neutral-800 p-1 h-11 w-full sm:w-auto overflow-x-auto justify-start">
+                    <TabsTrigger value="browse" className="text-neutral-500 data-[state=active]:bg-neutral-800 data-[state=active]:text-white h-9 px-6 text-sm transition-colors whitespace-nowrap">
+                      Browse Sprints
+                    </TabsTrigger>
+                    <TabsTrigger value="joined" className="text-neutral-500 data-[state=active]:bg-neutral-800 data-[state=active]:text-white h-9 px-6 text-sm transition-colors whitespace-nowrap">
+                      Joined Sprints
+                    </TabsTrigger>
+                    <TabsTrigger value="managed" className="text-neutral-500 data-[state=active]:bg-neutral-800 data-[state=active]:text-white h-9 px-6 text-sm transition-colors whitespace-nowrap">
+                      Sprints You Manage
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" className="text-neutral-500 data-[state=active]:bg-neutral-800 data-[state=active]:text-white h-9 px-6 text-sm transition-colors whitespace-nowrap">
+                      Pending Requests
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <div className="mt-4">
+                    {activeTab === "pending" ? (
+                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Team Name</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Sprint ID</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Repository</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {allPendingRegistrations.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center text-neutral-500 py-12">No pending registration requests.</TableCell>
+                              </TableRow>
+                            ) : (
+                              allPendingRegistrations.map((reg) => (
+                                <TableRow key={`${reg.teamId}-${reg.repoId}`} className="border-neutral-800 bg-black hover:bg-neutral-900 h-10 transition-colors">
+                                  <TableCell className="font-medium text-white text-sm whitespace-nowrap">{reg.teamName}</TableCell>
+                                  <TableCell className="text-neutral-400 text-xs whitespace-nowrap">{reg.sprintId}</TableCell>
+                                  <TableCell className="text-neutral-400 text-xs truncate max-w-[150px]">{reg.repoId}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-500 h-7 text-xs px-2"
+                                      onClick={() => {
+                                        navigateSprint("manage", reg.sprintId);
+                                      }}
+                                    >
+                                      Go Manage
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Sprint Name</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Period</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Teams</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Participants</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Status</TableHead>
+                              <TableHead className="text-neutral-400 font-medium text-right text-xs h-7 py-1">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {paginatedSprints.map((sprint) => (
+                              <TableRow
+                                key={sprint.id}
+                                className="border-neutral-800 bg-black hover:bg-neutral-900 h-10 cursor-pointer transition-colors"
                                 onClick={() => {
-                                  setSelectedSprint(sprint.id);
-                                  setViewMode("manage");
-                                  setCreateForm({
-                                    name: sprint.name,
-                                    description: sprint.description || "",
-                                    isPublic: !sprint.isPrivate,
-                                  });
-                                  setStartDate(sprint.startDate.split('T')[0]);
-                                  setEndDate(sprint.endDate.split('T')[0]);
+                                  navigateSprint("participate", sprint.id);
                                 }}
                               >
-                                Manage
-                              </Button>
+                                <TableCell className="font-medium text-white text-sm py-1 whitespace-nowrap">{sprint.name}</TableCell>
+                                <TableCell className="text-white/60 text-xs py-1 whitespace-nowrap">
+                                  {format(new Date(sprint.startDate), 'MMM dd')} - {format(new Date(sprint.endDate), 'MMM dd')}
+                                </TableCell>
+                                <TableCell className="text-white text-right text-sm py-1">{sprint.teamsCount || 0}</TableCell>
+                                <TableCell className="text-neutral-400 text-right text-sm py-1">{sprint.participantsCount || 0}</TableCell>
+                                <TableCell className="py-1">
+                                  <Badge className={sprint.status === 'active' || sprint.isOpen ? 'bg-blue-500/10 text-blue-400 border-neutral-800 text-[10px] h-4 px-1.5' : 'bg-neutral-900 text-neutral-400 border-neutral-800 text-[10px] h-4 px-1.5'}>
+                                    {sprint.status || (sprint.isOpen ? 'active' : 'closed')}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
+                                  {currentUser && sprint.managerName === currentUser.username && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs px-2 text-red-400 hover:text-red-300"
+                                      onClick={() => {
+                                        navigateSprint("manage", sprint.id);
+                                        setCreateForm({
+                                          name: sprint.name,
+                                          description: sprint.description || "",
+                                          isPublic: !sprint.isPrivate,
+                                        });
+                                        setStartDate(sprint.startDate.split('T')[0]);
+                                        setEndDate(sprint.endDate.split('T')[0]);
+                                      }}
+                                    >
+                                      Manage
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {paginatedSprints.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center text-neutral-500 py-12">
+                                  {loadingSprints || loadingMySprints ? "Loading sprints..." : "No sprints found in this category."}
+                                </TableCell>
+                              </TableRow>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {paginatedSprints.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-neutral-500 py-8">No sprints found.</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                </Tabs>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
+                {activeTab !== "pending" && totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 py-2">
                     <Button
                       variant="outline"
@@ -719,7 +963,7 @@ export function SprintPage() {
                   <h2 className="text-base font-semibold text-white">Sprint Details</h2>
                   <Button
                     variant="ghost"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => navigateSprint("list", null)}
                     className="text-neutral-400 hover:text-white h-7 text-xs px-2"
                   >
                     ← Back
@@ -732,6 +976,21 @@ export function SprintPage() {
                       <div className="space-y-3 flex-1">
                         <div>
                           <h1 className="text-2xl font-bold text-white mb-2">{selectedSprintData.name}</h1>
+                          <div className="flex items-center gap-2 mb-2">
+                            <code className="bg-black/50 border border-neutral-800 px-2 py-0.5 rounded text-[10px] text-neutral-400 font-mono">
+                              ID: {selectedSprintData.id}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 text-neutral-500 hover:text-white"
+                              onClick={() => {
+                                navigator.clipboard.writeText(selectedSprintData.id);
+                              }}
+                            >
+                              <FaRegCopy className="w-3 h-3" />
+                            </Button>
+                          </div>
                           <p className="text-neutral-400 text-sm leading-relaxed">
                             {selectedSprintData.description || "No description provided for this sprint."}
                           </p>
@@ -773,7 +1032,7 @@ export function SprintPage() {
                     {/* Hidden Sprint Select to clean up UI */}
                     <div className="hidden">
                       <h3 className="text-sm font-medium text-white mb-2">Select Sprint</h3>
-                      <Select value={selectedSprint || ''} onValueChange={(value) => setSelectedSprint(value)}>
+                      <Select value={selectedSprint || ''} onValueChange={(value) => navigateSprint(viewMode, value)}>
                         <SelectTrigger className="bg-black border-neutral-800 text-white h-8 text-sm">
                           <SelectValue placeholder="Choose a sprint to participate" />
                         </SelectTrigger>
@@ -787,51 +1046,139 @@ export function SprintPage() {
                       </Select>
                     </div>
 
+
                     <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
-                      <h3 className="text-sm font-medium text-white mb-2">Register Repositories</h3>
-                      <div className="space-y-2 mb-3">
-                        {myRepositories.map((repo) => (
-                          <div
-                            key={repo.id}
-                            onClick={() => toggleRepo(repo.id)}
-                            className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${selectedRepos.includes(repo.id)
-                              ? 'border-blue-500 bg-blue-500/10'
-                              : 'border-neutral-800 hover:bg-neutral-800'
-                              }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <GitBranch className="w-4 h-4 text-neutral-400" />
-                              <span className="text-sm text-white">{repo.name}</span>
-                            </div>
-                            {selectedRepos.includes(repo.id) && (
-                              <Badge className="bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-2">
-                                Selected
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-medium text-white">Sprint Registration</h3>
                       </div>
-                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
-                        <h3 className="text-sm font-medium text-white mb-2">Team Information</h3>
-                        <div className="space-y-2">
-                          <Label className="text-sm text-neutral-400">Team ID</Label>
-                          <Input
-                            placeholder="Enter Team ID to join with..."
-                            value={teamIdInput}
-                            onChange={(e) => setTeamIdInput(e.target.value)}
-                            className="bg-black border-neutral-800 text-white h-8 text-sm"
-                          />
-                          <p className="text-xs text-neutral-500">
-                            * You must provide a Team ID to register.
+
+                      {isManager ? (
+                        <div className="p-6 border border-blue-500/20 rounded-md bg-blue-500/5 text-center space-y-2">
+                          <Sparkles className="w-8 h-8 text-blue-400 mx-auto opacity-50" />
+                          <h4 className="text-sm font-semibold text-white">Sprint Manager Mode</h4>
+                          <p className="text-xs text-neutral-400 max-w-[250px] mx-auto">
+                            As the manager of this sprint, you are responsible for approving teams and declaring winners.
+                            Managers cannot register their own teams for participation.
                           </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 border-neutral-800 bg-neutral-900 text-blue-400 hover:bg-neutral-800 h-8 px-4"
+                            onClick={() => navigateSprint("manage", selectedSprint)}
+                          >
+                            Go to Management
+                          </Button>
                         </div>
-                      </div>
-                      <Button
-                        className="w-full bg-blue-500 hover:bg-blue-600 text-white border-0 h-8 text-sm"
-                        onClick={onRegisterSprint}
-                      >
-                        Register for Sprint
-                      </Button>
+                      ) : selectedSprintData && (new Date() > new Date(selectedSprintData.endDate)) ? (
+                        <div className="p-8 border border-amber-500/20 rounded-md bg-amber-500/5 text-center space-y-3">
+                          <Clock className="w-10 h-10 text-amber-500 mx-auto opacity-50" />
+                          <div>
+                            <h4 className="text-base font-bold text-white mb-1">Sprint Completed</h4>
+                            <p className="text-xs text-neutral-400 max-w-[300px] mx-auto">
+                              This sprint has ended on {format(new Date(selectedSprintData.endDate), 'yyyy.MM.dd')}.
+                              Registration is no longer available. Viewing results and rankings only.
+                            </p>
+                          </div>
+                          <div className="pt-2">
+                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                              Completed
+                            </Badge>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Step 1: Select Your Team</h4>
+                              {loadingTeams ? (
+                                <div className="text-sm text-neutral-400 py-4 text-center">Loading teams...</div>
+                              ) : leaderTeams.length === 0 ? (
+                                <div className="text-sm text-neutral-400 py-4 text-center border border-neutral-800 rounded-md bg-neutral-900/50">
+                                  <p className="mb-1 text-xs">You are not a team leader.</p>
+                                  <p className="text-[10px]">Only team leaders can register teams for sprints.</p>
+                                </div>
+                              ) : (
+                                <Select value={selectedTeam || ''} onValueChange={(value) => setSelectedTeam(value)}>
+                                  <SelectTrigger className="bg-black border-neutral-800 text-white h-9 text-sm">
+                                    <SelectValue placeholder="Choose a team" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-neutral-900 border-neutral-800">
+                                    {leaderTeams.map((team) => {
+                                      const isAlreadyRegistered = registrations.some(reg => reg.teamId === team.teamId);
+                                      return (
+                                        <SelectItem
+                                          key={team.teamId}
+                                          value={team.teamId}
+                                          className="text-white text-sm"
+                                          disabled={team.repoCount === 0 || isAlreadyRegistered}
+                                        >
+                                          <div className={`flex items-center justify-between w-full ${team.repoCount === 0 || isAlreadyRegistered ? 'opacity-50' : ''}`}>
+                                            <span>{team.name}</span>
+                                            <span className="text-xs text-neutral-400 ml-2">
+                                              {isAlreadyRegistered ? (
+                                                <span className="text-blue-400 font-medium">Already Registered</span>
+                                              ) : (
+                                                `${team.memberCount || 0} members, ${team.repoCount || 0} repos`
+                                              )}
+                                            </span>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+
+                            {selectedTeam && (
+                              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <h4 className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Step 2: Select Repository</h4>
+                                {loadingRepos ? (
+                                  <div className="text-sm text-neutral-400 py-4 text-center">Loading repositories...</div>
+                                ) : teamRepos.length === 0 ? (
+                                  <div className="text-sm text-neutral-400 py-4 text-center border border-neutral-800 rounded-md bg-neutral-900/50">
+                                    <p className="mb-1 text-xs">No repositories found.</p>
+                                    <p className="text-[10px]">Add repositories to your team first.</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2 mb-3">
+                                    {teamRepos.map((repo) => (
+                                      <div
+                                        key={repo.id}
+                                        onClick={() => setSelectedRepo(repo.id)}
+                                        className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${selectedRepo === repo.id
+                                          ? 'border-blue-500 bg-blue-500/10'
+                                          : 'border-neutral-800 hover:bg-neutral-800'
+                                          }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <GitBranch className="w-4 h-4 text-neutral-400" />
+                                          <div>
+                                            <span className="text-sm text-white">{repo.reponame}</span>
+                                          </div>
+                                        </div>
+                                        {selectedRepo === repo.id && (
+                                          <Badge className="bg-blue-500/10 text-blue-400 border-neutral-800 text-xs h-4 px-2">
+                                            Selected
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <Button
+                              className="w-full bg-blue-500 hover:bg-blue-600 text-white border-0 h-9 text-sm font-medium transition-all"
+                              onClick={onRegisterSprint}
+                              disabled={!selectedTeam || !selectedRepo}
+                            >
+                              {selectedTeam && selectedRepo ? "Register for Sprint" : "Process Registration"}
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Right - Ranking & Team Matches */}
@@ -910,50 +1257,62 @@ export function SprintPage() {
                         </div>
                       </div>
 
-                      {/* Team Members reused or moved if needed, keeping currently as is below */}
-                      <div className="bg-neutral-900 border border-neutral-800 rounded-lg">
-                        <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
-                          <h3 className="text-sm font-medium text-white">Team Members</h3>
-                        </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
-                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Member</TableHead>
-                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Role</TableHead>
-                              <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
-                              <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Contribution</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {teamMembers.map((member) => (
-                              <TableRow key={member.username} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
-                                <TableCell className="py-1">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="w-6 h-6 border border-neutral-800">
-                                      <AvatarImage src={defaultAvatar} />
-                                      <AvatarFallback className="bg-neutral-900 text-white text-xs">
-                                        {member.name.split(' ').map(n => n[0]).join('')}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <div className="text-sm font-medium text-white">{member.name}</div>
-                                      <div className="text-xs text-neutral-400">@{member.username}</div>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-sm text-neutral-400 py-1">{member.role}</TableCell>
-                                <TableCell className="text-sm text-white text-right py-1">{member.commits}</TableCell>
-                                <TableCell className="py-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <Progress value={member.contribution} className="flex-1 h-1.5" />
-                                    <span className="text-xs text-neutral-400 min-w-[35px]">{member.contribution}%</span>
-                                  </div>
-                                </TableCell>
+                      {/* Team Members */}
+                      {selectedTeam && (
+                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg animate-in fade-in duration-500">
+                          <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900">
+                            <h3 className="text-sm font-medium text-white">Team Members</h3>
+                          </div>
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-neutral-800 bg-neutral-900 hover:bg-neutral-900">
+                                <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Member</TableHead>
+                                <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Role</TableHead>
+                                <TableHead className="text-neutral-400 font-medium text-xs text-right h-7 py-1">Commits</TableHead>
+                                <TableHead className="text-neutral-400 font-medium text-xs h-7 py-1">Contribution</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                            </TableHeader>
+                            <TableBody>
+                              {loadingMembers ? (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-neutral-500 py-4 text-xs">Loading members...</TableCell>
+                                </TableRow>
+                              ) : selectedTeamMembers.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-neutral-500 py-4 text-xs">No members found in this team</TableCell>
+                                </TableRow>
+                              ) : (
+                                selectedTeamMembers.map((member: TeamMemberResponse) => (
+                                  <TableRow key={member.userId} className="border-neutral-800 bg-black hover:bg-neutral-900 h-8">
+                                    <TableCell className="py-1">
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="w-6 h-6 border border-neutral-800">
+                                          <AvatarImage src={member.profileUrl || defaultAvatar} />
+                                          <AvatarFallback className="bg-neutral-900 text-white text-[10px]">
+                                            {member.username.substring(0, 2).toUpperCase()}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                          <div className="text-sm font-medium text-white">{member.username}</div>
+                                          <div className="text-[10px] text-neutral-400">@{member.username}</div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-xs text-neutral-400 py-1">{member.role}</TableCell>
+                                    <TableCell className="text-xs text-white text-right py-1">{member.commitCount}</TableCell>
+                                    <TableCell className="py-1">
+                                      <div className="flex items-center gap-1.5 min-w-[100px]">
+                                        <Progress value={member.contributionScore} className="flex-1 h-1.5" />
+                                        <span className="text-[10px] text-neutral-400 min-w-[30px]">{Math.round(member.contributionScore)}%</span>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -966,7 +1325,7 @@ export function SprintPage() {
                   <h2 className="text-base font-semibold text-white">Sprint Rankings</h2>
                   <Button
                     variant="ghost"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => navigateSprint("list", null)}
                     className="text-neutral-400 hover:text-white h-7 text-xs px-2"
                   >
                     ← Back
@@ -1143,7 +1502,7 @@ export function SprintPage() {
                     <h2 className="text-base font-semibold text-white">Create New Sprint</h2>
                     <Button
                       variant="ghost"
-                      onClick={() => setViewMode("list")}
+                      onClick={() => navigateSprint("list", null)}
                       className="text-neutral-400 hover:text-white h-7 text-xs px-2"
                     >
                       ← Back
@@ -1260,11 +1619,25 @@ export function SprintPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-bold text-white">Manage Sprint</h2>
-                    <p className="text-sm text-neutral-400">{selectedSprintData.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-neutral-400">{selectedSprintData.name}</p>
+                      <span className="text-neutral-700">|</span>
+                      <code className="text-[10px] text-neutral-500 font-mono">{selectedSprintData.id}</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 text-neutral-600 hover:text-white"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedSprintData.id);
+                        }}
+                      >
+                        <FaRegCopy className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => navigateSprint("list", null)}
                     className="text-neutral-400 hover:text-white h-8 px-3"
                   >
                     ← Back to List
@@ -1285,7 +1658,7 @@ export function SprintPage() {
                           <Input
                             value={createForm.name}
                             onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                            className="bg-black border-neutral-800 text-white"
+                            className="bg-black border-neutral-800 text-white h-10"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1296,33 +1669,83 @@ export function SprintPage() {
                             className="w-full bg-black border border-neutral-800 rounded-md p-3 text-white text-sm min-h-[100px]"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <Label className="text-sm text-neutral-400">Start Date</Label>
-                          <Input
-                            type="date"
-                            min={new Date().toISOString().split('T')[0]} // Future dates only
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-black border-neutral-800 text-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm text-neutral-400">End Date</Label>
-                          <Input
-                            type="date"
-                            min={new Date().toISOString().split('T')[0]} // Future dates only
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-black border-neutral-800 text-white"
-                          />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-neutral-400 uppercase tracking-wider">Start Date</Label>
+                              <Input
+                                type="date"
+                                disabled={new Date(selectedSprintData.startDate) <= new Date()}
+                                value={startDate}
+                                onChange={(e) => {
+                                  setStartDate(e.target.value);
+                                  if (e.target.value && endDate) {
+                                    setDateRange({ from: new Date(e.target.value), to: new Date(endDate) });
+                                  }
+                                }}
+                                className="bg-black border-neutral-800 text-white h-9 text-sm disabled:opacity-50"
+                              />
+                              {new Date(selectedSprintData.startDate) <= new Date() && (
+                                <p className="text-[10px] text-amber-500 mt-1">Sprints that have already started cannot change their start date.</p>
+                              )}
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-neutral-400 uppercase tracking-wider">End Date</Label>
+                              <Input
+                                type="date"
+                                min={startDate || new Date().toISOString().split('T')[0]}
+                                value={endDate}
+                                onChange={(e) => {
+                                  setEndDate(e.target.value);
+                                  if (e.target.value && startDate) {
+                                    setDateRange({ from: new Date(startDate), to: new Date(e.target.value) });
+                                  }
+                                }}
+                                className="bg-black border-neutral-800 text-white h-9 text-sm"
+                              />
+                              <p className="text-[10px] text-neutral-500 mt-1">Must be after the start date.</p>
+                            </div>
+
+                            <div className="flex items-center justify-between py-3 border-t border-neutral-800">
+                              <div>
+                                <Label className="text-sm text-white font-medium">Public Sprint</Label>
+                                <p className="text-[10px] text-neutral-400">Make this sprint visible to everyone.</p>
+                              </div>
+                              <Switch
+                                checked={createForm.isPublic}
+                                onCheckedChange={(checked) => setCreateForm({ ...createForm, isPublic: checked })}
+                                className="bg-neutral-800 data-[state=checked]:bg-blue-600"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center">
+                            <CalendarWithRangePresets
+                              dateRange={dateRange}
+                              setDateRange={setDateRange}
+                              month={month}
+                              setMonth={setMonth}
+                              setStartDate={setStartDate}
+                              setEndDate={setEndDate}
+                            />
+                          </div>
                         </div>
                       </div>
+
                       <Button
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-6"
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-6 h-12 shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.01]"
                         onClick={onUpdateSprint}
                         disabled={isUpdating}
                       >
-                        {isUpdating ? "Updating..." : "Update Sprint Details"}
+                        {isUpdating ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            Updating...
+                          </div>
+                        ) : (
+                          "Update Sprint Details"
+                        )}
                       </Button>
                     </div>
                   </div>
