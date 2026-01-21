@@ -257,6 +257,16 @@ export interface RepositoryDetails {
   pushedAt: string;
   lastSyncAt: string;
   languages: Record<string, number>;
+  metrics?: RepoMetrics;
+  contributors?: Contributor[];
+}
+
+export interface Contributor {
+  username: string;
+  profileUrl: string;
+  role: string;
+  rank: number;
+  score: number;
 }
 
 export interface Branch {
@@ -568,6 +578,44 @@ export async function getRepositoryCommits(
     }));
   } catch (error) {
     console.error('Error fetching commits:', error);
+    return [];
+  }
+}
+
+/**
+ * Get branch-specific commits
+ */
+export async function getRepositoryBranchCommits(
+  repoId: string,
+  branchName: string
+): Promise<Commit[]> {
+  try {
+    const data = await apiCall<Array<{
+      sha: string;
+      message: string;
+      committedAt: string;
+      authorName: string;
+      authorProfileUrl?: string;
+      analysisStatus?: 'PENDING' | 'IN_PROGRESS' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+      totalScore?: number;
+    }>>(`/api/repos/${encodeURIComponent(repoId)}/branches/${encodeURIComponent(branchName)}/commits`);
+
+    return data.map((commit) => ({
+      sha: commit.sha,
+      message: commit.message,
+      author: commit.authorName,
+      username: commit.authorName,
+      authorName: commit.authorName,
+      authorProfileUrl: commit.authorProfileUrl,
+      time: commit.committedAt,
+      committedAt: commit.committedAt,
+      verified: false,
+      branch: branchName,
+      analysisStatus: commit.analysisStatus,
+      totalScore: commit.totalScore,
+    }));
+  } catch (error) {
+    console.error(`Error fetching commits for branch ${branchName}:`, error);
     return [];
   }
 }
@@ -1638,6 +1686,30 @@ export async function searchResources(
   type: 'ALL' | 'USER' | 'REPOSITORY' | 'TEAM' = 'ALL'
 ): Promise<SearchResult> {
   return apiCall<SearchResult>(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
+}
+
+/**
+ * Get repository metrics
+ */
+export async function getRepositoryMetrics(repoId: string): Promise<RepoMetrics | null> {
+  try {
+    return await apiCall<RepoMetrics>(`/api/repos/${repoId}/metrics`);
+  } catch (error) {
+    console.error('Error fetching repository metrics:', error);
+    return null;
+  }
+}
+
+/**
+ * Get repository contributors
+ */
+export async function getRepositoryContributors(repoId: string): Promise<Contributor[]> {
+  try {
+    return await apiCall<Contributor[]>(`/api/repos/${repoId}/contributors`);
+  } catch (error) {
+    console.error('Error fetching repository contributors:', error);
+    return [];
+  }
 }
 
 

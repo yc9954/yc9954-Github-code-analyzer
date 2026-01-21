@@ -7,7 +7,7 @@ import { Input } from "@/app/components/ui/input";
 import { GitBranch, MessageSquare, Send, Copy, CheckCircle2, Github, GitCommit, AlertCircle, Loader2, FileText, BarChart2, RefreshCw } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
-import { getRepositoryCommits, getRepositoryBranches, getUserRepositories, sendChatMessage, getCommitAnalysis, getRepositoryDetails, type Commit, type Repository, type Branch, type ChatMessage, type CommitAnalysis, type RepositoryDetails } from "@/lib/api";
+import { getRepositoryCommits, getRepositoryBranchCommits, getRepositoryBranches, getUserRepositories, sendChatMessage, getCommitAnalysis, getRepositoryDetails, syncRepository, getRepositoryMetrics, getRepositoryContributors, type Commit, type Repository, type Branch, type ChatMessage, type CommitAnalysis, type RepositoryDetails } from "@/lib/api";
 
 const languageData = [
   { name: "TypeScript", percentage: 52, color: "#3178c6" },
@@ -44,6 +44,7 @@ export function CommitsPage() {
   const [activeTab, setActiveTab] = useState<"chat" | "analysis">("chat");
   const [repositoryDetails, setRepositoryDetails] = useState<RepositoryDetails | null>(null);
   const [loadingRepositoryDetails, setLoadingRepositoryDetails] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   // Data State
   const [commits, setCommits] = useState<Commit[]>([]);
@@ -55,6 +56,7 @@ export function CommitsPage() {
 
   const autoAnswerTriggered = useRef(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const lastSyncedRepoId = useRef<string | null>(null);
 
   // Read URL query parameters
   useEffect(() => {
@@ -113,6 +115,25 @@ export function CommitsPage() {
       loadBranches(owner, repoName);
     }
   }, [owner, repoName]);
+
+  // Auto-sync effect
+  useEffect(() => {
+    const triggerAutoSync = async () => {
+      if (owner && repoName && repositories.length > 0) {
+        const repo = repositories.find(r => (r.owner === owner && r.name === repoName) || r.fullName === `${owner}/${repoName}`);
+        if (repo && lastSyncedRepoId.current !== repo.id) {
+          lastSyncedRepoId.current = repo.id;
+          console.log('[Auto-Sync] Queueing sync for repository:', repo.id);
+          try {
+            await syncRepository(repo.id);
+          } catch (error) {
+            console.error('[Auto-Sync] Failed to queue sync:', error);
+          }
+        }
+      }
+    };
+    triggerAutoSync();
+  }, [owner, repoName, repositories]);
 
   useEffect(() => {
     if (owner && repoName && selectedBranch) {
@@ -202,38 +223,60 @@ export function CommitsPage() {
         || repositories.find(r => r.fullName === `${owner}/${repo}`);
 
       let commitList: Commit[] = [];
+      let repoToUse = repoObj;
 
       if (repoObj && repoObj.id) {
-        console.log('Fetching commit activities for repoId:', repoObj.id);
-        // Use the new activities endpoint if we have an ID
-        // We'll import getRepositoryCommitActivities dynamically or add it to imports
-        // Assuming we added it to imports (Action required: update imports)
-        const { getRepositoryCommitActivities } = await import("@/lib/api");
-        const activities = await getRepositoryCommitActivities(repoObj.id);
+        if (branch === 'total') {
+          console.log('Fetching commit activities for repoId:', repoObj.id);
+          const { getRepositoryCommitActivities } = await import("@/lib/api");
+          const activities = await getRepositoryCommitActivities(repoObj.id);
 
-        // Map activities to Commit interface
-        commitList = activities.map(activity => ({
-          sha: activity.sha,
-          message: activity.message,
-          committedAt: activity.committedAt,
-          time: activity.committedAt, // formatted time usually done in component but map here
-          author: activity.authorName, // map authorName to author
-          authorName: activity.authorName,
-          username: activity.authorName, // Add username
-          authorProfileUrl: activity.authorProfileUrl,
-          analysisStatus: activity.analysisStatus,
-          totalScore: activity.totalScore,
-          branch: branch, // assume current branch or gathered
-          verified: false // default
-        }));
+          commitList = activities.map(activity => ({
+            sha: activity.sha,
+            message: activity.message,
+            committedAt: activity.committedAt,
+            time: activity.committedAt,
+            author: activity.authorName,
+            authorName: activity.authorName,
+            username: activity.authorName,
+            authorProfileUrl: activity.authorProfileUrl,
+            analysisStatus: activity.analysisStatus,
+            totalScore: activity.totalScore,
+            branch: 'total',
+            verified: false
+          }));
+        } else {
+          console.log(`Fetching commits for branch ${branch} on repoId: ${repoToUse?.id}`);
+          commitList = await getRepositoryBranchCommits(repoToUse!.id, branch);
+        }
       } else {
         // Fallback: If we can't find the repository, try to fetch it
         console.warn('Repository not found in repositories list, fetching repositories...');
         const repos = await getUserRepositories();
-        const selectedRepo = repos.find(r => r.owner === owner && r.name === repo);
+        const selectedRepo = repos.find(r => (r.owner === owner && r.name === repo) || r.fullName === `${owner}/${repo}`);
 
         if (selectedRepo) {
-          commitList = await getRepositoryCommits(selectedRepo.id, branch, 1, 20);
+          repoToUse = selectedRepo;
+          if (branch === 'total') {
+            const { getRepositoryCommitActivities } = await import("@/lib/api");
+            const activities = await getRepositoryCommitActivities(selectedRepo.id);
+            commitList = activities.map(activity => ({
+              sha: activity.sha,
+              message: activity.message,
+              committedAt: activity.committedAt,
+              time: activity.committedAt,
+              author: activity.authorName,
+              authorName: activity.authorName,
+              username: activity.authorName,
+              authorProfileUrl: activity.authorProfileUrl,
+              analysisStatus: activity.analysisStatus,
+              totalScore: activity.totalScore,
+              branch: 'total',
+              verified: false
+            }));
+          } else {
+            commitList = await getRepositoryBranchCommits(selectedRepo.id, branch);
+          }
         } else {
           console.error('Could not find repository');
         }
@@ -249,9 +292,12 @@ export function CommitsPage() {
 
       setCommits(uniqueCommits);
 
+      const repositoryIdToLoad = repoToUse?.id;
+
       // Load repository details if no commit is selected
-      if (!selectedCommit && repoObj?.id) {
-        loadRepositoryDetails(repoObj.id);
+      if (!selectedCommit && repositoryIdToLoad) {
+        console.log('Loading repository details for repoId:', repositoryIdToLoad);
+        loadRepositoryDetails(repositoryIdToLoad);
       }
     } catch (error) {
       console.error("Error loading commits:", error);
@@ -266,14 +312,27 @@ export function CommitsPage() {
     setOwner(newOwner);
     setRepoName(newRepo);
     setSelectedRepo(newRepo);
-    setSelectedBranch("main");
+    setSelectedBranch("total");
     setCommits([]);
     setSelectedCommit(null);
     setAnalysis(null);
+    setRepositoryDetails(null);
+
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(window.location.search);
+    newSearchParams.set("owner", newOwner);
+    newSearchParams.set("repo", newRepo);
+    newSearchParams.set("branch", "total");
+    window.history.pushState({}, "", `${window.location.pathname}?${newSearchParams.toString()}`);
   };
 
   const handleBranchChange = (branch: string) => {
     setSelectedBranch(branch);
+
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(window.location.search);
+    newSearchParams.set("branch", branch);
+    window.history.pushState({}, "", `${window.location.pathname}?${newSearchParams.toString()}`);
   };
 
   const handleSend = async () => {
@@ -348,8 +407,19 @@ export function CommitsPage() {
   const loadRepositoryDetails = async (repoId: string) => {
     setLoadingRepositoryDetails(true);
     try {
-      const details = await getRepositoryDetails(repoId);
-      setRepositoryDetails(details);
+      const [details, metrics, contributors] = await Promise.all([
+        getRepositoryDetails(repoId),
+        getRepositoryMetrics(repoId),
+        getRepositoryContributors(repoId)
+      ]);
+
+      if (details) {
+        setRepositoryDetails({
+          ...details,
+          metrics: metrics || undefined,
+          contributors: contributors || []
+        });
+      }
     } catch (error) {
       console.error("Error loading repository details:", error);
       setRepositoryDetails(null);
@@ -359,7 +429,15 @@ export function CommitsPage() {
   };
 
   const handleCommitSelect = (sha: string) => {
-    if (selectedCommit === sha) return;
+    if (selectedCommit === sha) {
+      setSelectedCommit(null);
+      // Load repository details again when commit is deselected
+      const repoObj = repositories.find(r => (r.owner === owner && r.name === repoName) || r.fullName === `${owner}/${repoName}`);
+      if (repoObj?.id) {
+        loadRepositoryDetails(repoObj.id);
+      }
+      return;
+    }
     setSelectedCommit(sha);
     setActiveTab("analysis"); // Switch to analysis tab when commit selected
     loadCommitAnalysis(sha);
@@ -409,6 +487,9 @@ export function CommitsPage() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-white/5 backdrop-blur-md border-white/10">
+                  <SelectItem value="total" className="text-white focus:bg-white/10 text-xs font-semibold">
+                    All Branches
+                  </SelectItem>
                   {branches.map((branch) => (
                     <SelectItem key={branch.name} value={branch.name} className="text-white focus:bg-white/10 text-xs">
                       {branch.name}
@@ -432,24 +513,46 @@ export function CommitsPage() {
               <button
                 onClick={async () => {
                   if (owner && repoName && repositories.length > 0) {
-                    const repo = repositories.find(r => r.owner === owner && r.name === repoName);
+                    const repo = repositories.find(r => (r.owner === owner && r.name === repoName) || r.fullName === `${owner}/${repoName}`);
                     if (repo) {
+                      setSyncStatus('loading');
                       try {
-                        const { syncRepository } = await import("@/lib/api");
                         await syncRepository(repo.id);
-                        // Optionally reload commits after sync
+                        setSyncStatus('success');
+                        // Reload commits after sync
                         await loadCommits(owner, repoName, selectedBranch);
+                        // Reset status after 3 seconds
+                        setTimeout(() => setSyncStatus('idle'), 3000);
                       } catch (error) {
                         console.error('Error syncing repository:', error);
+                        setSyncStatus('error');
+                        setTimeout(() => setSyncStatus('idle'), 3000);
                       }
                     }
                   }
                 }}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors"
+                disabled={syncStatus !== 'idle'}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-all duration-300 ${syncStatus === 'success' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                  syncStatus === 'loading' ? 'bg-white/5 text-white/40 cursor-wait' :
+                    syncStatus === 'error' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                      'text-white/60 hover:text-white hover:bg-white/10'
+                  }`}
                 title="Sync repository with GitHub"
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>Sync</span>
+                {syncStatus === 'success' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 animate-in zoom-in duration-300" />
+                ) : syncStatus === 'loading' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : syncStatus === 'error' ? (
+                  <AlertCircle className="w-3.5 h-3.5" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  {syncStatus === 'success' ? 'Queued' :
+                    syncStatus === 'loading' ? 'Syncing...' :
+                      syncStatus === 'error' ? 'Failed' : 'Sync'}
+                </span>
               </button>
             </div>
 
@@ -617,151 +720,153 @@ export function CommitsPage() {
               </TabsContent>
 
               <TabsContent value="analysis" className="flex-1 overflow-y-auto p-6 data-[state=inactive]:hidden mt-0">
-                {!selectedCommit ? (
-                  <div className="flex items-center justify-center h-full text-center text-white/50">
-                    <div>
-                      <GitCommit className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">Select a commit to view analysis</p>
+                {selectedCommit ? (
+                  loadingAnalysis ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="w-8 h-8 text-[#7aa2f7] animate-spin" />
+                      <span className="ml-3 text-white/60 text-sm">Analyzing commit...</span>
                     </div>
-                  </div>
-                ) : loadingAnalysis ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-[#7aa2f7] animate-spin" />
-                    <span className="ml-3 text-white/60 text-sm">Analyzing commit...</span>
-                  </div>
-                ) : analysis ? (
-                  <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="flex items-start justify-between">
+                  ) : analysis ? (
+                    <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h2 className="text-xl font-semibold text-white mb-2">{analysis.message}</h2>
+                          <div className="flex items-center gap-3 text-xs text-white/50">
+                            <span className="flex items-center gap-1">
+                              <Github className="w-3 h-3" />
+                              {analysis.authorName}
+                            </span>
+                            <span>{analysis.committedAt}</span>
+                            <span className="font-mono text-[#7aa2f7]">{analysis.sha.substring(0, 7)}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-3xl font-bold text-[#7aa2f7]">{analysis.totalScore}</div>
+                          <div className="text-xs text-white/40 uppercase tracking-wider mt-1">Total Score</div>
+                        </div>
+                      </div>
+
+                      {/* Scores Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[
+                          { label: "Code Quality", score: analysis.codeQuality },
+                          { label: "Message Quality", score: analysis.commitMessageQuality },
+                          { label: "Necessity", score: analysis.necessity },
+                          { label: "Correctness", score: analysis.correctnessAndRisk },
+                        ].map((stat) => (
+                          <div key={stat.label} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                            <div className="text-xs text-white/50 mb-1 whitespace-nowrap">{stat.label}</div>
+                            <div className="text-lg font-semibold text-white">{stat.score ?? '-'}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-6">
+                        {analysis.summary && (
+                          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-[#7aa2f7]" />
+                              Summary
+                            </h3>
+                            <p className="text-sm text-white/80 leading-relaxed">{analysis.summary}</p>
+                          </div>
+                        )}
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {analysis.strengths && (
+                            <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+                              <h3 className="text-sm font-semibold text-green-400 mb-2">Strengths</h3>
+                              {(() => {
+                                try {
+                                  const items = JSON.parse(analysis.strengths);
+                                  if (Array.isArray(items)) {
+                                    return (
+                                      <ul className="text-sm text-white/80 leading-relaxed space-y-2">
+                                        {items.map((item, idx) => (
+                                          <li key={idx} className="flex gap-2">
+                                            <span className="text-green-400 mt-1">•</span>
+                                            <span>{item}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    );
+                                  }
+                                } catch {
+                                  // If not JSON, display as is
+                                }
+                                return <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{analysis.strengths}</p>;
+                              })()}
+                            </div>
+                          )}
+
+                          {analysis.issues && (
+                            <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
+                              <h3 className="text-sm font-semibold text-red-400 mb-2">Issues</h3>
+                              {(() => {
+                                try {
+                                  const items = JSON.parse(analysis.issues);
+                                  if (Array.isArray(items)) {
+                                    return (
+                                      <ul className="text-sm text-white/80 leading-relaxed space-y-2">
+                                        {items.map((item, idx) => (
+                                          <li key={idx} className="flex gap-2">
+                                            <span className="text-red-400 mt-1">•</span>
+                                            <span>{item}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    );
+                                  }
+                                } catch {
+                                  // If not JSON, display as is
+                                }
+                                return <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{analysis.issues}</p>;
+                              })()}
+                            </div>
+                          )}
+                        </div>
+
+                        {analysis.suggestedNextCommit && (
+                          <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
+                            <h3 className="text-sm font-semibold text-blue-400 mb-2">Suggested Next Steps</h3>
+                            {(() => {
+                              try {
+                                const items = JSON.parse(analysis.suggestedNextCommit);
+                                if (Array.isArray(items)) {
+                                  return (
+                                    <ul className="text-sm text-white/80 leading-relaxed space-y-2">
+                                      {items.map((item, idx) => (
+                                        <li key={idx} className="flex gap-2">
+                                          <span className="text-blue-400 mt-1">•</span>
+                                          <span>{item}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  );
+                                }
+                              } catch {
+                                // If not JSON, display as is
+                              }
+                              return <p className="text-sm text-white/80 leading-relaxed">{analysis.suggestedNextCommit}</p>;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-center text-white/50">
                       <div>
-                        <h2 className="text-xl font-semibold text-white mb-2">{analysis.message}</h2>
-                        <div className="flex items-center gap-3 text-xs text-white/50">
-                          <span className="flex items-center gap-1">
-                            <Github className="w-3 h-3" />
-                            {analysis.authorName}
-                          </span>
-                          <span>{analysis.committedAt}</span>
-                          <span className="font-mono text-[#7aa2f7]">{analysis.sha.substring(0, 7)}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-[#7aa2f7]">{analysis.totalScore}</div>
-                        <div className="text-xs text-white/40 uppercase tracking-wider mt-1">Total Score</div>
+                        <GitCommit className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">Analysis not found for this commit</p>
                       </div>
                     </div>
-
-                    {/* Scores Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                        { label: "Code Quality", score: analysis.codeQuality },
-                        { label: "Message Quality", score: analysis.commitMessageQuality },
-                        { label: "Necessity", score: analysis.necessity },
-                        { label: "Correctness", score: analysis.correctnessAndRisk },
-                      ].map((stat) => (
-                        <div key={stat.label} className="bg-white/5 border border-white/10 rounded-lg p-3">
-                          <div className="text-xs text-white/50 mb-1 whitespace-nowrap">{stat.label}</div>
-                          <div className="text-lg font-semibold text-white">{stat.score ?? '-'}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-6">
-                      {analysis.summary && (
-                        <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                          <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-[#7aa2f7]" />
-                            Summary
-                          </h3>
-                          <p className="text-sm text-white/80 leading-relaxed">{analysis.summary}</p>
-                        </div>
-                      )}
-
-                      <div className="grid md:grid-cols-2 gap-6">
-                        {analysis.strengths && (
-                          <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-green-400 mb-2">Strengths</h3>
-                            {(() => {
-                              try {
-                                const items = JSON.parse(analysis.strengths);
-                                if (Array.isArray(items)) {
-                                  return (
-                                    <ul className="text-sm text-white/80 leading-relaxed space-y-2">
-                                      {items.map((item, idx) => (
-                                        <li key={idx} className="flex gap-2">
-                                          <span className="text-green-400 mt-1">•</span>
-                                          <span>{item}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  );
-                                }
-                              } catch {
-                                // If not JSON, display as is
-                              }
-                              return <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{analysis.strengths}</p>;
-                            })()}
-                          </div>
-                        )}
-
-                        {analysis.issues && (
-                          <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-red-400 mb-2">Issues</h3>
-                            {(() => {
-                              try {
-                                const items = JSON.parse(analysis.issues);
-                                if (Array.isArray(items)) {
-                                  return (
-                                    <ul className="text-sm text-white/80 leading-relaxed space-y-2">
-                                      {items.map((item, idx) => (
-                                        <li key={idx} className="flex gap-2">
-                                          <span className="text-red-400 mt-1">•</span>
-                                          <span>{item}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  );
-                                }
-                              } catch {
-                                // If not JSON, display as is
-                              }
-                              return <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{analysis.issues}</p>;
-                            })()}
-                          </div>
-                        )}
-                      </div>
-
-                      {analysis.suggestedNextCommit && (
-                        <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
-                          <h3 className="text-sm font-semibold text-blue-400 mb-2">Suggested Next Steps</h3>
-                          {(() => {
-                            try {
-                              const items = JSON.parse(analysis.suggestedNextCommit);
-                              if (Array.isArray(items)) {
-                                return (
-                                  <ul className="text-sm text-white/80 leading-relaxed space-y-2">
-                                    {items.map((item, idx) => (
-                                      <li key={idx} className="flex gap-2">
-                                        <span className="text-blue-400 mt-1">•</span>
-                                        <span>{item}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                );
-                              }
-                            } catch {
-                              // If not JSON, display as is
-                            }
-                            return <p className="text-sm text-white/80 leading-relaxed">{analysis.suggestedNextCommit}</p>;
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  )
                 ) : loadingRepositoryDetails ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
                   </div>
                 ) : repositoryDetails ? (
-                  <div className="p-6 space-y-6 overflow-y-auto">
+                  <div className="p-6 space-y-6 overflow-y-auto max-w-4xl mx-auto">
                     {/* Repository Header */}
                     <div className="border-b border-white/10 pb-6">
                       <h2 className="text-2xl font-bold text-white mb-2">{repositoryDetails.reponame}</h2>
@@ -777,6 +882,73 @@ export function CommitsPage() {
                         <span>{(repositoryDetails.size / 1024).toFixed(1)} MB</span>
                       </div>
                     </div>
+
+                    {/* Repository Metrics */}
+                    {repositoryDetails.metrics && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-[#7aa2f7]/5 border border-[#7aa2f7]/20 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                          <div className="text-[10px] text-[#7aa2f7]/60 mb-1 font-medium uppercase tracking-wider">Average Score</div>
+                          <div className="text-3xl font-bold text-[#7aa2f7]">
+                            {repositoryDetails.metrics.averageScore?.toFixed(1) || '0'}
+                          </div>
+                        </div>
+                        <div className="bg-[#bb9af7]/5 border border-[#bb9af7]/20 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                          <div className="text-[10px] text-[#bb9af7]/60 mb-1 font-medium uppercase tracking-wider">Total Score</div>
+                          <div className="text-3xl font-bold text-[#bb9af7]">
+                            {Math.round((repositoryDetails.metrics.averageScore || 0) * (repositoryDetails.metrics.commitCount || 0)).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                          <div className="text-[10px] text-emerald-500/60 mb-1 font-medium uppercase tracking-wider">Commit Count</div>
+                          <div className="text-3xl font-bold text-emerald-400">
+                            {repositoryDetails.metrics.commitCount || '0'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contributors */}
+                    {repositoryDetails.contributors && repositoryDetails.contributors.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                          Contributors
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/40">
+                            {repositoryDetails.contributors.length}
+                          </span>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {repositoryDetails.contributors
+                            .sort((a, b) => b.score - a.score)
+                            .map((contributor, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors group">
+                                <div className="flex items-center gap-3">
+                                  <div className="relative">
+                                    <img
+                                      src={contributor.profileUrl}
+                                      alt={contributor.username}
+                                      className="w-8 h-8 rounded-full border border-white/10"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${contributor.username}&background=random`;
+                                      }}
+                                    />
+                                    <div className="absolute -top-1 -left-1 w-4 h-4 bg-[#0d1117] border border-white/10 rounded-full flex items-center justify-center text-[10px] text-white/40 font-bold">
+                                      {contributor.rank}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-medium text-white group-hover:text-[#7aa2f7] transition-colors">{contributor.username}</div>
+                                    <div className="text-[10px] text-white/40 uppercase tracking-tighter font-semibold">{contributor.role}</div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-bold text-[#7aa2f7]">{contributor.score}</div>
+                                  <div className="text-[10px] text-white/30 uppercase">Score</div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Topics */}
                     {repositoryDetails.topics && repositoryDetails.topics.length > 0 && (
@@ -796,7 +968,7 @@ export function CommitsPage() {
                     {repositoryDetails.languages && Object.keys(repositoryDetails.languages).length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold text-white mb-3">Languages</h3>
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {Object.entries(repositoryDetails.languages)
                             .sort(([, a], [, b]) => b - a)
                             .slice(0, 5)
@@ -811,7 +983,7 @@ export function CommitsPage() {
                                   </div>
                                   <div className="w-full bg-white/10 rounded-full h-1.5">
                                     <div
-                                      className="bg-blue-500 h-1.5 rounded-full"
+                                      className="bg-[#7aa2f7] h-1.5 rounded-full transition-all duration-500"
                                       style={{ width: `${percentage}%` }}
                                     />
                                   </div>
@@ -823,34 +995,34 @@ export function CommitsPage() {
                     )}
 
                     {/* Repository Info */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                         <div className="text-xs text-white/50 mb-1">Created</div>
                         <div className="text-sm text-white">{new Date(repositoryDetails.createdAt).toLocaleDateString()}</div>
                       </div>
                       <div className="bg-white/5 border border-white/10 rounded-lg p-3">
-                        <div className="text-xs text-white/50 mb-1">Last Updated</div>
+                        <div className="text-xs text-white/50 mb-1">Updated</div>
                         <div className="text-sm text-white">{new Date(repositoryDetails.updatedAt).toLocaleDateString()}</div>
                       </div>
                       <div className="bg-white/5 border border-white/10 rounded-lg p-3">
-                        <div className="text-xs text-white/50 mb-1">Last Push</div>
+                        <div className="text-xs text-white/50 mb-1">Pushed</div>
                         <div className="text-sm text-white">{new Date(repositoryDetails.pushedAt).toLocaleDateString()}</div>
                       </div>
                       {repositoryDetails.lastSyncAt && (
                         <div className="bg-white/5 border border-white/10 rounded-lg p-3">
-                          <div className="text-xs text-white/50 mb-1">Last Sync</div>
+                          <div className="text-xs text-white/50 mb-1">Synced</div>
                           <div className="text-sm text-white">{new Date(repositoryDetails.lastSyncAt).toLocaleDateString()}</div>
                         </div>
                       )}
                     </div>
 
                     {/* Repository URL */}
-                    <div>
+                    <div className="pt-4">
                       <a
                         href={repositoryDetails.repoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-blue-400 hover:bg-white/10 hover:text-blue-300 transition-all"
                       >
                         <Github className="w-4 h-4" />
                         View on GitHub
@@ -858,8 +1030,11 @@ export function CommitsPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-white/50">
-                    Select a commit to view analysis or repository details will appear here
+                  <div className="flex items-center justify-center h-full text-center text-white/50">
+                    <div>
+                      <GitCommit className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">Select a commit to view analysis or wait for repository details</p>
+                    </div>
                   </div>
                 )}
               </TabsContent>
