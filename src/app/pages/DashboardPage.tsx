@@ -1,48 +1,101 @@
 import { DashboardLayout } from "@/app/components/DashboardLayout";
-import RotatingEarth from "@/app/components/ui/wireframe-dotted-globe";
-import { useState, useEffect } from "react";
+import RotatingEarth, { type CustomDot } from "@/app/components/ui/wireframe-dotted-globe";
+import { useState, useEffect, useRef } from "react";
+import {
+  getMyDashboard,
+  getMySprints,
+  getMyRecentCommits,
+  type DashboardStatsResponse,
+  type Sprint,
+  type Commit
+} from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 
-// Major tech hubs coordinates for realistic simulation
+// Major cities coordinates for realistic event locations
 const majorCities = [
-  { lat: 37.5665, lng: 126.9780, location: "Seoul, South Korea" },
-  { lat: 37.7749, lng: -122.4194, location: "San Francisco, USA" },
-  { lat: 40.7128, lng: -74.0060, location: "New York, USA" },
-  { lat: 51.5074, lng: -0.1278, location: "London, UK" },
-  { lat: 35.6762, lng: 139.6503, location: "Tokyo, Japan" },
-  { lat: 52.5200, lng: 13.4050, location: "Berlin, Germany" },
-  { lat: 22.3193, lng: 114.1694, location: "Hong Kong" },
-  { lat: 1.3521, lng: 103.8198, location: "Singapore" },
-  { lat: 48.8566, lng: 2.3522, location: "Paris, France" },
-  { lat: -33.8688, lng: 151.2093, location: "Sydney, Australia" },
-  { lat: 19.0760, lng: 72.8777, location: "Mumbai, India" },
-  { lat: 55.7558, lng: 37.6173, location: "Moscow, Russia" },
-  { lat: -23.5505, lng: -46.6333, location: "São Paulo, Brazil" },
-  { lat: 43.6532, lng: -79.3832, location: "Toronto, Canada" },
-  { lat: -77.846, lng: 166.668, location: "McMurdo Station, Antarctica" }, // Added Antarctica
+  { lat: 37.5665, lng: 126.9780, name: "Seoul, South Korea" },
+  { lat: 40.7128, lng: -74.0060, name: "New York, USA" },
+  { lat: 51.5074, lng: -0.1278, name: "London, UK" },
+  { lat: 35.6762, lng: 139.6503, name: "Tokyo, Japan" },
+  { lat: 37.7749, lng: -122.4194, name: "San Francisco, USA" },
+  { lat: 52.5200, lng: 13.4050, name: "Berlin, Germany" },
+  { lat: -33.8688, lng: 151.2093, name: "Sydney, Australia" },
+  { lat: 55.7558, lng: 37.6173, name: "Moscow, Russia" },
+  { lat: 39.9042, lng: 116.4074, name: "Beijing, China" },
+  { lat: 19.4326, lng: -99.1332, name: "Mexico City, Mexico" },
+  { lat: -23.5505, lng: -46.6333, name: "São Paulo, Brazil" },
+  { lat: 28.6139, lng: 77.2090, name: "New Delhi, India" },
+  { lat: 25.2048, lng: 55.2708, name: "Dubai, UAE" },
+  { lat: -34.6037, lng: -58.3816, name: "Buenos Aires, Argentina" },
+  { lat: 48.8566, lng: 2.3522, name: "Paris, France" },
+  { lat: 41.9028, lng: 12.4964, name: "Rome, Italy" },
+  { lat: 52.2297, lng: 21.0122, name: "Warsaw, Poland" },
+  { lat: 59.9343, lng: 30.3351, name: "Saint Petersburg, Russia" },
+  { lat: 31.2304, lng: 121.4737, name: "Shanghai, China" },
+  { lat: 1.3521, lng: 103.8198, name: "Singapore" },
 ];
 
-const activityTypes = [
-  { type: "commit", title: "New Commit", description: "Pushed changes to main branch", color: "#7aa2f7" }, // Blue
-  { type: "search", title: "Code Search", description: "Searched for 'authentication'", color: "#bb9af7" }, // Purple
-  { type: "view", title: "Repo View", description: "Viewing repository details", color: "#7dcfff" }, // Cyan
-  { type: "clone", title: "Git Clone", description: "Cloned repository locally", color: "#9ece6a" }, // Green
-  { type: "issue", title: "Issue Created", description: "Opened new issue #42", color: "#f7768e" }, // Red
-  { type: "pr", title: "Pull Request", description: "Opened PR: 'Fix login bug'", color: "#ff9e64" },
+const sprintTitles = [
+  "Q1 Sprint Planning",
+  "Product Launch Sprint",
+  "Infrastructure Sprint",
+  "Mobile App Sprint",
+  "Backend Optimization",
+  "Frontend Redesign",
+  "API Integration",
+  "Security Audit",
+  "Performance Sprint",
+  "Feature Development",
 ];
-const _unused = "suppress lints";
+
+const issueTitles = [
+  "Authentication Bug",
+  "Performance Issue",
+  "Database Connection Error",
+  "Memory Leak Detected",
+  "API Rate Limit",
+  "Cache Invalidation",
+  "Network Timeout",
+  "Data Sync Error",
+  "UI Rendering Issue",
+  "Security Vulnerability",
+];
+
+// Generate random event
+const generateRandomEvent = (id: string): CustomDot => {
+  const isSprint = Math.random() > 0.5;
+  const city = majorCities[Math.floor(Math.random() * majorCities.length)];
+  const randomOffset = () => (Math.random() - 0.5) * 10; // ±5 degrees random offset
+
+  return {
+    lat: city.lat + randomOffset(),
+    lng: city.lng + randomOffset(),
+    color: isSprint ? "#7aa2f7" : "#f0883e",
+    size: isSprint ? 8 : 6,
+    type: isSprint ? "sprint" : "issue",
+    title: isSprint
+      ? sprintTitles[Math.floor(Math.random() * sprintTitles.length)]
+      : issueTitles[Math.floor(Math.random() * issueTitles.length)],
+    location: city.name,
+    date: new Date().toISOString().split('T')[0],
+    id, // Unique identifier for removal
+  };
+};
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
+  const [dashboardStats, setDashboardStats] = useState<DashboardStatsResponse | null>(null);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [liveDots, setLiveDots] = useState<any[]>([]);
+  const [dynamicEvents, setDynamicEvents] = useState<CustomDot[]>([]);
+  const eventIdCounter = useRef(0);
 
   useEffect(() => {
     const updateDimensions = () => {
       setDimensions({
         width: window.innerWidth - 100,
-        height: window.innerHeight - 200, // Adjusted height
+        height: window.innerHeight - 200,
       });
     };
 
@@ -51,84 +104,121 @@ export function DashboardPage() {
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  // Load dashboard data (Cleaned up)
+  // Load dashboard data
   useEffect(() => {
-    // Determine loading state
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    const loadDashboardData = async () => {
+      try {
+        const [stats, mySprints] = await Promise.all([
+          getMyDashboard(),
+          getMySprints(),
+        ]);
 
-  // Live Activity Simulation
+        setDashboardStats(stats);
+        setSprints(mySprints);
+
+      } catch (error: any) {
+        console.error('Error loading dashboard data:', error);
+        // Only redirect if it's an authentication error
+        if (error.message?.includes('인증') || error.message?.includes('세션') || error.message?.includes('401')) {
+          navigate('/login');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [navigate]);
+
+  // Dynamic event generation and removal
   useEffect(() => {
-    // Add new dots every random interval
-    const addDotInterval = setInterval(() => {
-      // Spawn 3-5 dots at once
-      const dotsToSpawn = Math.floor(Math.random() * 3) + 3;
-      const newDots = [];
+    if (loading) return;
 
-      for (let i = 0; i < dotsToSpawn; i++) {
-        const randomCity = majorCities[Math.floor(Math.random() * majorCities.length)];
-        const randomActivity = activityTypes[Math.floor(Math.random() * activityTypes.length)];
+    const addRandomEvents = () => {
+      // Random number of events to add (1-3)
+      const numToAdd = Math.floor(Math.random() * 3) + 1;
+      const newEvents: CustomDot[] = [];
 
-        newDots.push({
-          lat: randomCity.lat + (Math.random() - 0.5) * 10, // Increased jitter for wider spread
-          lng: randomCity.lng + (Math.random() - 0.5) * 10,
-          color: randomActivity.color,
-          size: 4 + Math.random() * 6, // Random size 4-10
-          type: "activity",
-          title: randomActivity.title,
-          description: randomActivity.description,
-          location: randomCity.location,
-          date: new Date().toLocaleTimeString(),
-          opacity: 1,
-          id: Date.now() + Math.random() + i, // Unique ID
-          createdAt: Date.now(),
-          lifeTime: 8000 + Math.random() * 5000 // Increased lifetime: 8-13 seconds
-        });
+      for (let i = 0; i < numToAdd; i++) {
+        eventIdCounter.current += 1;
+        newEvents.push(generateRandomEvent(`event-${eventIdCounter.current}`));
       }
 
-      setLiveDots(prev => [...prev, ...newDots]);
-    }, 1200); // Slightly slower interval since we spawn multiple dots
+      setDynamicEvents(prev => [...prev, ...newEvents]);
+    };
 
-    // Fade out and remove dots loop (60fps)
-    const fadeInterval = setInterval(() => {
-      const now = Date.now();
-      setLiveDots(prev => {
-        return prev
-          .map(dot => {
-            const age = now - dot.createdAt;
-            const remainingLife = dot.lifeTime - age;
 
-            if (remainingLife <= 0) return null;
+    // Initial events
+    const initialEvents: CustomDot[] = [];
+    for (let i = 0; i < 5; i++) {
+      eventIdCounter.current += 1;
+      initialEvents.push(generateRandomEvent(`event-${eventIdCounter.current}`));
+    }
+    setDynamicEvents(initialEvents);
 
-            // Start fading in last 1.5 seconds
-            let newOpacity = 1;
-            if (remainingLife < 1500) {
-              newOpacity = remainingLife / 1500;
+    // Recursive function to add events at random intervals (3-8 seconds)
+    let addTimeoutId: NodeJS.Timeout;
+    const scheduleAddEvent = () => {
+      const delay = Math.random() * 5000 + 3000; // 3-8 seconds
+      addTimeoutId = setTimeout(() => {
+        if (Math.random() > 0.3) { // 70% chance to add
+          addRandomEvents();
+        }
+        scheduleAddEvent(); // Schedule next addition
+      }, delay);
+    };
+
+    // Recursive function to remove events at random intervals (4-10 seconds)
+    let removeTimeoutId: NodeJS.Timeout;
+    const scheduleRemoveEvent = () => {
+      const delay = Math.random() * 6000 + 4000; // 4-10 seconds
+      removeTimeoutId = setTimeout(() => {
+        setDynamicEvents(prev => {
+          if (prev.length === 0) {
+            scheduleRemoveEvent(); // Schedule next removal attempt
+            return prev;
+          }
+          if (Math.random() > 0.4) { // 60% chance to remove if events exist
+            // Random number of events to remove (1-2, but not more than available)
+            const numToRemove = Math.min(
+              Math.floor(Math.random() * 2) + 1,
+              prev.length
+            );
+
+            // Randomly select events to remove
+            const indicesToRemove = new Set<number>();
+            while (indicesToRemove.size < numToRemove && indicesToRemove.size < prev.length) {
+              indicesToRemove.add(Math.floor(Math.random() * prev.length));
             }
 
-            return { ...dot, opacity: newOpacity };
-          })
-          .filter(Boolean) as any[]; // Remove nulls
-      });
-    }, 50);
+            const newEvents = prev.filter((_, index) => !indicesToRemove.has(index));
+            scheduleRemoveEvent(); // Schedule next removal
+            return newEvents;
+          }
+          scheduleRemoveEvent(); // Schedule next removal attempt even if we didn't remove
+          return prev;
+        });
+      }, delay);
+    };
+
+    // Start the scheduling
+    scheduleAddEvent();
+    scheduleRemoveEvent();
 
     return () => {
-      clearInterval(addDotInterval);
-      clearInterval(fadeInterval);
+      clearTimeout(addTimeoutId);
+      clearTimeout(removeTimeoutId);
     };
-  }, []);
+  }, [loading]);
+
+  const allDots = dynamicEvents;
 
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col bg-black">
         {/* Compact Header */}
-        <div className="px-6 py-4 border-b border-neutral-800 bg-black flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-white">Live Activity Map</h1>
-          <div className="text-xs text-neutral-500 animate-pulse flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            Real-time User Activity
-          </div>
+        <div className="px-6 py-4 border-b border-neutral-800 bg-black">
+          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
         </div>
 
         <div className="flex-1 overflow-hidden bg-black relative">
@@ -136,14 +226,14 @@ export function DashboardPage() {
             <RotatingEarth
               width={dimensions.width}
               height={dimensions.height}
-              customDots={liveDots}
+              customDots={allDots}
               className="w-full h-full"
             />
           </div>
 
-          {/* Overlay info */}
+          {/* Overlay info if needed */}
           <div className="absolute bottom-6 left-6 text-neutral-500 text-xs">
-            * Visualizing live user actions (Commits, Searches, Views)
+            * Globe visualization represents active sprints and detected issues
           </div>
         </div>
       </div>
